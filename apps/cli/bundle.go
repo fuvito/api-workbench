@@ -132,7 +132,7 @@ func writeReport(cmd *cobra.Command, outputFile string, data []byte) error {
 }
 
 func bundleRunCmd() *cobra.Command {
-	var envName, envFile, specFile, format, outputFile string
+	var envName, envFile, specFile, format, outputFile, workspacePath string
 	var vars []string
 	var reports []string
 	var showExtracted bool
@@ -211,9 +211,13 @@ Exit codes:
 				if key == "" {
 					key = r.Scenario.Title
 				}
-				runner := newScenarioRunner(loader.load(r.Scenario.SpecFile, baseDir)).WithEngine(engine, key)
+				spec := loader.load(r.Scenario.SpecFile, baseDir)
+				runner := newScenarioRunner(spec).WithEngine(engine, key)
 				res := runner.Run(context.Background(), r.Scenario, env)
 				res.RevealExtracted = showExtracted
+				if workspacePath != "" {
+					recordBundleCoverage(cmd, workspacePath, specFile, baseDir, r.Scenario, spec, res)
+				}
 				results = append(results, res)
 			}
 
@@ -252,6 +256,7 @@ Exit codes:
 	}
 
 	cmd.Flags().StringVarP(&envName, "env", "e", "", "Name of the bundle's environment to use (needed when it has several)")
+	cmd.Flags().StringVarP(&workspacePath, "workspace", "w", "", "Add what each scenario reached to the coverage of this workspace folder (needs a spec)")
 	cmd.Flags().StringArrayVar(&reports, "report", nil, "Also write a report to a file: format=file, for example junit=reports/bundle.xml (repeatable)")
 	cmd.Flags().Int64Var(&seed, "seed", 0, "Seed for random and dynamic values; default: random, printed in the report (or set CLRSIG_SEED)")
 	cmd.Flags().BoolVar(&showExtracted, "show-extracted", false, "Show extracted values whose names look secret (tokens, passwords, keys); secret environment values are always hidden")
@@ -262,6 +267,23 @@ Exit codes:
 	cmd.Flags().StringVarP(&format, "format", "f", "text", formatUsage+", or github (workflow commands that annotate a pull request, on the line of each failed step in the bundle)")
 	cmd.Flags().StringVarP(&outputFile, "output", "o", "", "Write the report to a file (parent directories created automatically)")
 	return cmd
+}
+
+// recordBundleCoverage adds one scenario of a bundle to the workspace's coverage, as clrsig run
+// --workspace does. specFlag is --spec as typed.
+func recordBundleCoverage(cmd *cobra.Command, workspacePath, specFlag, baseDir string, sc *domain.Scenario, spec *openapi.Spec, result *scenario.Result) {
+	if spec == nil {
+		fmt.Fprintf(cmd.ErrOrStderr(), "warning: scenario %q was not added to coverage: it has no spec that could be read (use --spec, or give the bundle a specFile)\n", sc.Title)
+		return
+	}
+	// a --spec path starts at the current folder, a specFile at the bundle's
+	ref, base := sc.SpecFile, baseDir
+	if specFlag != "" {
+		ref, base = specFlag, "."
+	}
+	if cov := spec.ScenarioCoverage(executedRequests(result)); cov != nil {
+		accumulateCoverage(cmd, workspacePath, ref, base, result, cov)
+	}
 }
 
 // bundleGitHubRuns puts each scenario's annotations on the bundle file, on the lines of its steps.

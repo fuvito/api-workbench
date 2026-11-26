@@ -278,6 +278,8 @@ A **bundle** is one document that holds environments, reusable requests and seve
 6. If some files already exist, choose **Rename** (keep both, saved as `name-2.yaml`), **Skip** or **Overwrite**.
 7. Click **Import**.
 
+**Copy CLI command** copies the `clrsig bundle import` command that does the same with your choices. If you pasted the bundle, or changed it after opening the file, save its text as `bundle.yaml` first, as the note says.
+
 The result is ordinary request, scenario and environment files under `requests/`, `scenarios/` and `environments/`. Nothing is written until you click Import, and a bundle with any problem is not imported at all. Select the new environment afterwards. The bundle format is described in the Format Spec under **Bundle File**.
 
 ### Exporting a bundle

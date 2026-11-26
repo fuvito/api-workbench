@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { FileUp, AlertTriangle, XCircle, FolderOpen, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { inputCls } from '@/lib/styles'
-import { pickBundleFile, previewBundle, importBundle } from '@/lib/bridge'
-import type { BundlePreview, BundleImportResult, BundleStrategy, BundleEntry } from '@/lib/bridge'
+import { pickBundleFile, previewBundle, importBundle, bundleImportCommand } from '@/lib/bridge'
+import type { BundlePreview, BundleImportResult, BundleStrategy, BundleEntry, BundleCommand } from '@/lib/bridge'
 
 type Props = {
   onClose: () => void
@@ -35,6 +35,9 @@ export function BundleImportDialog({ onClose, onComplete }: Props) {
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState<BundleImportResult | null>(null)
   const [fileError, setFileError] = useState('')
+  // the file the text came from; typing in the box makes it a different bundle
+  const [openedFile, setOpenedFile] = useState({ path: '', text: '' })
+  const [copied, setCopied] = useState<BundleCommand | null>(null)
   const requestId = useRef(0)
 
   // Re-check the bundle whenever the input changes; ignore answers from superseded requests.
@@ -64,7 +67,22 @@ export function BundleImportDialog({ onClose, onComplete }: Props) {
     setFileError('')
     const f = await pickBundleFile()
     if (f.error) { setFileError(f.error); return }
-    if (f.path) setText(f.text)
+    if (f.path) {
+      setText(f.text)
+      setOpenedFile({ path: f.path, text: f.text })
+    }
+  }
+
+  async function handleCopyCommand() {
+    const command = await bundleImportCommand(text === openedFile.text ? openedFile.path : '', specFile.trim(), strategy)
+    if (!command.error) {
+      try {
+        await navigator.clipboard.writeText(command.command)
+      } catch {
+        command.note = 'The command could not be copied: select it and copy it yourself. ' + (command.note ?? '')
+      }
+    }
+    setCopied(command)
   }
 
   async function handleImport() {
@@ -232,6 +250,17 @@ export function BundleImportDialog({ onClose, onComplete }: Props) {
           </div>
         )}
 
+        {copied && !result && (
+          <div className="px-5 py-2 border-t border-[var(--color-border)] text-xs" role="status">
+            {copied.error ? <span className="text-red-400">{copied.error}</span> : (
+              <>
+                <code className="block font-mono break-all select-text text-[var(--color-foreground)]">{copied.command}</code>
+                {copied.note && <span className="block mt-1 text-amber-400">{copied.note}</span>}
+              </>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-[var(--color-border)] shrink-0">
           {result ? (
             <button
@@ -243,6 +272,14 @@ export function BundleImportDialog({ onClose, onComplete }: Props) {
             </button>
           ) : (
             <>
+              <button
+                type="button"
+                onClick={handleCopyCommand}
+                disabled={!hasText}
+                className={cn('mr-auto px-3 py-1.5 text-sm rounded text-[var(--color-accent)]', hasText ? 'hover:underline' : 'opacity-40 cursor-not-allowed')}
+              >
+                Copy CLI command
+              </button>
               <button
                 type="button"
                 onClick={onClose}

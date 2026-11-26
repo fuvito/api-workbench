@@ -63,6 +63,7 @@ import {
   PickBundleFile as WailsPickBundleFile,
   PreviewBundle as WailsPreviewBundle,
   ImportBundle as WailsImportBundle,
+  BundleImportCommand as WailsBundleImportCommand,
   ExportBundle as WailsExportBundle,
 } from '@wailsjs/go/main/BundleService'
 import {
@@ -548,6 +549,17 @@ export async function pickBundleFile(): Promise<BundleFile> {
 
 export async function previewBundle(text: string, specFile: string, strategy: BundleStrategy): Promise<BundlePreview> {
   return (await WailsPreviewBundle(text, specFile, strategy)) as unknown as BundlePreview
+}
+
+export interface BundleCommand {
+  command: string
+  shell: string
+  note?: string
+  error?: string
+}
+
+export async function bundleImportCommand(filePath: string, specFile: string, strategy: BundleStrategy): Promise<BundleCommand> {
+  return (await WailsBundleImportCommand(filePath, specFile, strategy)) as unknown as BundleCommand
 }
 
 export async function importBundle(text: string, specFile: string, strategy: BundleStrategy): Promise<BundleImportResult> {

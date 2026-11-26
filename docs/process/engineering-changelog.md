@@ -1150,3 +1150,9 @@ User-facing release notes are in the About dialog (`AboutDialog.tsx`) and on the
 - `--format github` on both. `diff` annotates the operation in the new spec (the file alone for a removed one); `bundle run` the line of each failed step in the bundle. Changes are errors at or above `--fail-on`. Screen only, as before. The Action has no `bundle` command, so only `diff` is reachable through it.
 - **Guards:** `apps/cli/github_diff_bundle_test.go`. **Not verified:** how GitHub shows them in a real pull request.
 
+### 2026-11-26 — B-014: bundle coverage and the import dialog's command
+
+- `clrsig bundle run --workspace` records coverage per scenario, with the same rules as `run`; a scenario with no readable spec is warned about and left out.
+- The bundle import dialog copies the matching `clrsig bundle import` command, quoted by the Command Builder's rules (PowerShell on Windows, bash elsewhere).
+- **Guards:** `bundle_workspace_test.go`, `bundle_command_test.go`, the dialog's tests. **Not verified:** the button in the running app.
+

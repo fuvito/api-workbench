@@ -280,20 +280,7 @@ func executeScenario(cmd *cobra.Command, scenarioPath, seedKey string, s *domain
 
 	var cov *openapi.ScenarioCoverageResult
 	if loadedSpec != nil && (o.showCoverage || o.workspacePath != "") {
-		var executed []openapi.ExecutedRequest
-		for _, sr := range result.Steps {
-			if sr.Request != nil && sr.Response != nil {
-				executed = append(executed, openapi.ExecutedRequest{
-					Method:     string(sr.Request.Method),
-					URL:        sr.Request.URL,
-					StatusCode: sr.Response.StatusCode,
-					HadAuth:    sr.Request.Auth != nil,
-					Passed:     sr.Passed,
-					DurationMs: sr.Response.Duration.Milliseconds(),
-				})
-			}
-		}
-		cov = loadedSpec.ScenarioCoverage(executed)
+		cov = loadedSpec.ScenarioCoverage(executedRequests(result))
 	} else if o.showCoverage && loadedSpec == nil {
 		fmt.Fprintln(cmd.ErrOrStderr(), "warning: --coverage requires a spec (use --spec or add specFile: to the scenario)")
 	}
@@ -302,6 +289,24 @@ func executeScenario(cmd *cobra.Command, scenarioPath, seedKey string, s *domain
 		accumulateCoverage(cmd, o.workspacePath, specRef, specBase, result, cov)
 	}
 	return &scenarioRun{path: scenarioPath, result: result, cov: cov, specRef: specRef}
+}
+
+// executedRequests is what a scenario run sent and got answered, as coverage counts it.
+func executedRequests(result *scenario.Result) []openapi.ExecutedRequest {
+	var executed []openapi.ExecutedRequest
+	for _, sr := range result.Steps {
+		if sr.Request != nil && sr.Response != nil {
+			executed = append(executed, openapi.ExecutedRequest{
+				Method:     string(sr.Request.Method),
+				URL:        sr.Request.URL,
+				StatusCode: sr.Response.StatusCode,
+				HadAuth:    sr.Request.Auth != nil,
+				Passed:     sr.Passed,
+				DurationMs: sr.Response.Duration.Milliseconds(),
+			})
+		}
+	}
+	return executed
 }
 
 func accumulateCoverage(cmd *cobra.Command, workspacePath, specRef, specBase string, result *scenario.Result, cov *openapi.ScenarioCoverageResult) {

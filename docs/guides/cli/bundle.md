@@ -55,6 +55,7 @@ The bundle is validated first; any error stops the run before anything is sent.
 | `--var` | `name=value` for this run. Repeatable. | Stays in your shell history. |
 | `--scenario` | Run only the scenario with this title or file name. Repeatable. | A name that matches nothing is an error. |
 | `--spec`, `-s` | OpenAPI file or URL; replaces every scenario's spec. | |
+| `--workspace`, `-w` | Adds what each scenario reached to this workspace's [coverage](coverage.md). | A scenario with no readable spec is left out, with a warning. |
 | `--seed` | Seed for random and dynamic values. | Random, printed in the report. |
 | `--show-extracted` | Shows extracted values, secret-looking names included. | Off. |
 | `--format`, `-f` | `text`, `json`, `junit`, `html`, `markdown`, or `github` (annotations on a GitHub pull request: each failed step, on the bundle file; not for `--report`). | `text` |

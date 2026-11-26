@@ -3,7 +3,7 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import type { BundlePreview } from '@/lib/bridge'
 
 vi.mock('@/lib/bridge', () => ({
-  pickBundleFile: vi.fn(), previewBundle: vi.fn(), importBundle: vi.fn(),
+  pickBundleFile: vi.fn(), previewBundle: vi.fn(), importBundle: vi.fn(), bundleImportCommand: vi.fn(),
 }))
 
 import * as bridge from '@/lib/bridge'
@@ -262,3 +262,29 @@ describe('importing', () => {
     expect(b.importBundle).not.toHaveBeenCalled()
   })
 })
+
+describe('BundleImportDialog: Copy CLI command', () => {
+  it('names the opened file until the text is edited, and shows what was copied', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    const { type } = setup()
+    expect(screen.getByRole('button', { name: 'Copy CLI command' })).toBeDisabled()
+
+    b.pickBundleFile.mockResolvedValue({ path: '/tmp/b.yaml', text: 'schemaVersion: "1"' })
+    b.bundleImportCommand.mockResolvedValue({ command: 'clrsig bundle import /tmp/b.yaml', shell: 'bash' })
+    await act(async () => { fireEvent.click(screen.getByText('Open file…')) })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Copy CLI command' })) })
+    expect(b.bundleImportCommand).toHaveBeenLastCalledWith('/tmp/b.yaml', '', 'rename')
+    expect(writeText).toHaveBeenCalledWith('clrsig bundle import /tmp/b.yaml')
+    expect(screen.getByRole('status')).toHaveTextContent('clrsig bundle import /tmp/b.yaml')
+
+    await type('schemaVersion: "1"\ntitle: edited')
+    b.bundleImportCommand.mockResolvedValue({ command: 'clrsig bundle import bundle.yaml', shell: 'bash', note: 'Save the text first.' })
+    writeText.mockRejectedValue(new Error('denied'))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Copy CLI command' })) })
+    expect(b.bundleImportCommand).toHaveBeenLastCalledWith('', '', 'rename')
+    expect(screen.getByRole('status')).toHaveTextContent('could not be copied')
+    expect(screen.getByRole('status')).toHaveTextContent('Save the text first.')
+  })
+})
+
