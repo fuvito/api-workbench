@@ -1172,3 +1172,11 @@ User-facing release notes are in the About dialog (`AboutDialog.tsx`) and on the
 
 - The nine inline TypeScript object types have names in bridge.ts; check_bindings.py compares 81 of 81 and lists none as unchecked. Names only, as before.
 
+### 2026-11-26 — B-153 and B-155: a save keeps what the file holds
+
+- **`x-` keys** are carried as `domain.Extensions` (text, one JSON line per key) on the item they belong to, through the model, the Wails types and the editors, and written back by `serialization.Write{Request,Scenario,Environment}`. Without them the written file is what it was. Design: `enhancements/2026-11-26-keep-extension-keys.md`.
+- **Found while designing it (B-155):** the visual scenario editor's save also dropped assertion `name`, a step request's `title` and `timeout` (so a saved scenario could run differently), and wrote a list or object under `expected` as text.
+- The environment editor's YAML-to-form switch now uses the Go parser (new binding `ParseEnvironmentYAML`) instead of a line parser of its own.
+- **Guards:** `serialization/extensions_test.go`; `apps/desktop/testdata/scenario-roundtrip/` with `scenario_roundtrip_test.go` and `scenario-roundtrip.test.ts`, which tie the Go load to the TypeScript save (add new step fields to `original.yaml`).
+- **Not done:** comments, key order and anchors are still lost on a rebuilt save; bundles carry no `x-` keys. Not tried by hand in the running app.
+

@@ -19,16 +19,22 @@ import (
 type HeaderIO struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
+	// Extensions are the item's x- keys, which the editors carry back unread.
+	Extensions string `json:"extensions,omitempty"`
 }
 
 type QueryParamIO struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
+	// Extensions are the item's x- keys, which the editors carry back unread.
+	Extensions string `json:"extensions,omitempty"`
 }
 
 type BodyIO struct {
 	Type    string `json:"type"`
 	Content string `json:"content"`
+	// Extensions are the item's x- keys, which the editors carry back unread.
+	Extensions string `json:"extensions,omitempty"`
 }
 
 type AuthIO struct {
@@ -39,6 +45,8 @@ type AuthIO struct {
 	Key      string `json:"key"`      // apikey
 	Value    string `json:"value"`    // apikey
 	Location string `json:"location"` // apikey: header|query
+	// Extensions are the item's x- keys, which the editors carry back unread.
+	Extensions string `json:"extensions,omitempty"`
 }
 
 type RequestInput struct {
@@ -382,7 +390,7 @@ func inputToDomain(in RequestInput) (*domain.Request, error) {
 }
 
 func inputAuthToDomain(a *AuthIO) *domain.Auth {
-	auth := &domain.Auth{Type: domain.AuthType(a.Type)}
+	auth := &domain.Auth{Type: domain.AuthType(a.Type), Extensions: domain.Extensions(a.Extensions)}
 	switch auth.Type {
 	case domain.AuthBearer:
 		auth.Bearer = &domain.BearerAuth{Token: a.Token}

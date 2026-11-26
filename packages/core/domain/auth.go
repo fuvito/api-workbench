@@ -32,8 +32,9 @@ type APIKeyAuth struct {
 }
 
 type Auth struct {
-	Type   AuthType
-	Bearer *BearerAuth
-	Basic  *BasicAuth
-	APIKey *APIKeyAuth
+	Type       AuthType
+	Bearer     *BearerAuth
+	Basic      *BasicAuth
+	APIKey     *APIKeyAuth
+	Extensions Extensions
 }

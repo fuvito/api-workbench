@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 vi.mock('@/lib/bridge', () => ({
   getEnvironment: vi.fn(), saveEnvironment: vi.fn(), deleteEnvironment: vi.fn(),
   getEnvironmentRaw: vi.fn(), saveEnvironmentRaw: vi.fn(), validateEnvironmentYAML: vi.fn(),
+  parseEnvironmentYAML: vi.fn(),
 }))
 
 import * as bridge from '@/lib/bridge'
@@ -255,24 +256,35 @@ describe('YAML mode', () => {
     expect(screen.getByText('Check YAML')).toBeInTheDocument()
   })
 
-  it('switches back to the form by parsing name and variables, honouring quotes and secrets', async () => {
+  it('switches back to the form with what Go read from the text, and saves its x- keys', async () => {
     const { area } = await openYaml()
-    fireEvent.change(area, { target: { value: [
-      'schemaVersion: "1"', "name: 'Parsed'", 'variables:',
-      '  - name: a', '    value: "1"',
-      '  - name: b', '    value: two', '    secret: true',
-    ].join('\n') } })
+    b.parseEnvironmentYAML.mockResolvedValue({ path: '', name: 'Parsed', extensions: '"x-owner": "team"', variables: [
+      { name: 'a', value: '1', secret: false, extensions: '"x-note": 1' },
+      { name: 'b', value: 'two', secret: true },
+    ] })
+    fireEvent.change(area, { target: { value: 'the text' } })
     fireEvent.click(screen.getByText('Form'))
     expect(await screen.findByDisplayValue('Parsed')).toBeInTheDocument()
+    expect(b.parseEnvironmentYAML).toHaveBeenCalledWith('the text')
     expect(screen.getByDisplayValue('1')).toBeInTheDocument()
     expect((screen.getByDisplayValue('two') as HTMLInputElement).type).toBe('password')
+
+    // renaming a variable keeps its keys with it
+    fireEvent.change(screen.getByDisplayValue('a'), { target: { value: 'renamed' } })
+    fireEvent.click(screen.getByText('Save'))
+    await waitFor(() => expect(b.saveEnvironment).toHaveBeenCalled())
+    const sent = b.saveEnvironment.mock.calls[0][0]
+    expect(sent.extensions).toBe('"x-owner": "team"')
+    expect(sent.variables[0]).toMatchObject({ name: 'renamed', extensions: '"x-note": 1' })
+    expect(sent.variables[1].extensions).toBeUndefined()
   })
 
-  it('refuses to switch to the form when the YAML has no name', async () => {
+  it('stays in YAML, with the reason, when the text cannot be read', async () => {
     const { area } = await openYaml()
-    fireEvent.change(area, { target: { value: 'variables:\n  - name: a\n    value: b\n' } })
+    b.parseEnvironmentYAML.mockRejectedValue(new Error('missing required field: name'))
+    fireEvent.change(area, { target: { value: 'variables: []' } })
     fireEvent.click(screen.getByText('Form'))
-    expect(await screen.findByText(/Cannot switch to form/)).toBeInTheDocument()
+    expect(await screen.findByText(/Cannot switch to form.*missing required field: name/)).toBeInTheDocument()
     expect(document.querySelector('textarea')).not.toBeNull()
   })
 

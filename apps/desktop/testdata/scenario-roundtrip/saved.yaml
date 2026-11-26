@@ -1,0 +1,64 @@
+schemaVersion: "1"
+title: Round trip
+description: "Keeps: everything"
+specFile: openapi.yaml
+variables:
+  - name: email
+    value: "user-{{$randomString 10}}@example.com"
+    secret: true
+    "x-var": [1,"2",true,null]
+"x-owner": "payments"
+"x-big": 12345678901234567890
+steps:
+  - label: Create
+    notes: first
+    request:
+      title: Create a user
+      method: POST
+      url: "{{baseUrl}}/users"
+      followRedirects: false
+      timeout: 1m30s
+      "x-request": true
+      headers:
+        - name: Accept
+          value: application/json
+          "x-header": "h"
+      queryParams:
+        - name: dry
+          value: "true"
+          "x-query": "q"
+      body:
+        type: json
+        content: "{\"a\": 1}"
+        "x-body": "b"
+      auth:
+        type: apikey
+        key: X-Key
+        value: "{{key}}"
+        location: header
+        "x-auth": "a"
+    failPolicy: continue
+    timeoutMs: 900
+    retry:
+      maxAttempts: 3
+      delayMs: 200
+      "x-retry": "why"
+    assertions:
+      - type: jsonpath
+        name: "the id: set"
+        path: $.id
+        operator: eq
+        expected: {"a":[1,"two"]}
+        "x-assertion": "one"
+      - type: status
+        operator: eq
+        expected: 201
+    extractions:
+      - name: id
+        source: jsonpath
+        path: $.id
+        "x-extraction": "e"
+    "x-step": {"ticket":"ABC-1","note":"two\nlines"}
+  - label: Read
+    requestRef: ../requests/read.yaml
+    "x-step": "second"

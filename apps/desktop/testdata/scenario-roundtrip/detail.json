@@ -1,0 +1,97 @@
+{
+  "path": "",
+  "title": "Round trip",
+  "description": "Keeps: everything",
+  "specFile": "openapi.yaml",
+  "variables": [
+    {
+      "name": "email",
+      "value": "user-{{$randomString 10}}@example.com",
+      "secret": true,
+      "extensions": "\"x-var\": [1,\"2\",true,null]"
+    }
+  ],
+  "steps": [
+    {
+      "label": "Create",
+      "notes": "first",
+      "method": "POST",
+      "url": "{{baseUrl}}/users",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json",
+          "extensions": "\"x-header\": \"h\""
+        }
+      ],
+      "queryParams": [
+        {
+          "name": "dry",
+          "value": "true",
+          "extensions": "\"x-query\": \"q\""
+        }
+      ],
+      "bodyType": "json",
+      "bodyContent": "{\"a\": 1}",
+      "assertions": [
+        {
+          "type": "jsonpath",
+          "path": "$.id",
+          "operator": "eq",
+          "expected": {
+            "a": [
+              1,
+              "two"
+            ]
+          },
+          "extensions": "\"x-assertion\": \"one\"",
+          "name": "the id: set"
+        },
+        {
+          "type": "status",
+          "operator": "eq",
+          "expected": 201
+        }
+      ],
+      "extractions": [
+        {
+          "name": "id",
+          "source": "jsonpath",
+          "path": "$.id",
+          "extensions": "\"x-extraction\": \"e\""
+        }
+      ],
+      "failPolicy": "continue",
+      "timeoutMs": 900,
+      "retryMaxAttempts": 3,
+      "retryDelayMs": 200,
+      "noFollowRedirects": true,
+      "auth": {
+        "type": "apikey",
+        "token": "",
+        "username": "",
+        "password": "",
+        "key": "X-Key",
+        "value": "{{key}}",
+        "location": "header",
+        "extensions": "\"x-auth\": \"a\""
+      },
+      "extensions": "\"x-step\": {\"ticket\":\"ABC-1\",\"note\":\"two\\nlines\"}",
+      "requestTitle": "Create a user",
+      "requestTimeout": "1m30s",
+      "requestExtensions": "\"x-request\": true",
+      "bodyExtensions": "\"x-body\": \"b\"",
+      "retryExtensions": "\"x-retry\": \"why\""
+    },
+    {
+      "label": "Read",
+      "headers": [],
+      "queryParams": [],
+      "requestRef": "../requests/read.yaml",
+      "assertions": [],
+      "extractions": [],
+      "extensions": "\"x-step\": \"second\""
+    }
+  ],
+  "extensions": "\"x-owner\": \"payments\"\n\"x-big\": 12345678901234567890"
+}

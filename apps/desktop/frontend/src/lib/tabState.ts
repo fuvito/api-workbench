@@ -14,6 +14,7 @@ export type TabState = {
   auth: AuthState
   timeoutMs: number
   noFollowRedirects?: boolean // true returns a 3xx response instead of following it
+  extensions?: string // the request file's own x- keys, written back on save
   name: string | null
   filePath: string | null
   targetDir: string | null

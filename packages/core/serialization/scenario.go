@@ -13,46 +13,51 @@ import (
 
 // ScenarioFile is the on-disk representation of a Scenario.
 type ScenarioFile struct {
-	SchemaVersion string     `yaml:"schemaVersion" json:"schemaVersion"`
-	Title         string     `yaml:"title,omitempty" json:"title,omitempty"`
-	Description   string     `yaml:"description,omitempty" json:"description,omitempty"`
-	SpecFile      string     `yaml:"specFile,omitempty" json:"specFile,omitempty"`
-	Variables     []EnvVar   `yaml:"variables,omitempty" json:"variables,omitempty"`
-	Steps         []StepFile `yaml:"steps" json:"steps"`
+	SchemaVersion string            `yaml:"schemaVersion" json:"schemaVersion"`
+	Title         string            `yaml:"title,omitempty" json:"title,omitempty"`
+	Description   string            `yaml:"description,omitempty" json:"description,omitempty"`
+	SpecFile      string            `yaml:"specFile,omitempty" json:"specFile,omitempty"`
+	Variables     []EnvVar          `yaml:"variables,omitempty" json:"variables,omitempty"`
+	Steps         []StepFile        `yaml:"steps" json:"steps"`
+	Extensions    domain.Extensions `yaml:"-" json:"-"`
 }
 
 type RetryPolicyFile struct {
-	MaxAttempts int `yaml:"maxAttempts" json:"maxAttempts"`
-	DelayMs     int `yaml:"delayMs,omitempty" json:"delayMs,omitempty"`
+	MaxAttempts int               `yaml:"maxAttempts" json:"maxAttempts"`
+	DelayMs     int               `yaml:"delayMs,omitempty" json:"delayMs,omitempty"`
+	Extensions  domain.Extensions `yaml:"-" json:"-"`
 }
 
 type StepFile struct {
-	Label        string           `yaml:"label,omitempty" json:"label,omitempty"`
-	Notes        string           `yaml:"notes,omitempty" json:"notes,omitempty"`
-	Disabled     bool             `yaml:"disabled,omitempty" json:"disabled,omitempty"`
-	RequestRef   string           `yaml:"requestRef,omitempty" json:"requestRef,omitempty"`
-	Request      *RequestFile     `yaml:"request,omitempty" json:"request,omitempty"`
-	Assertions   []AssertionFile  `yaml:"assertions,omitempty" json:"assertions,omitempty"`
-	Extractions  []ExtractionFile `yaml:"extractions,omitempty" json:"extractions,omitempty"`
-	FailPolicy   string           `yaml:"failPolicy,omitempty" json:"failPolicy,omitempty"`
-	TimeoutMs    int              `yaml:"timeoutMs,omitempty" json:"timeoutMs,omitempty"`
-	Retry        *RetryPolicyFile `yaml:"retry,omitempty" json:"retry,omitempty"`
-	ValidateSpec *bool            `yaml:"validateSpec,omitempty" json:"validateSpec,omitempty"`
+	Label        string            `yaml:"label,omitempty" json:"label,omitempty"`
+	Notes        string            `yaml:"notes,omitempty" json:"notes,omitempty"`
+	Disabled     bool              `yaml:"disabled,omitempty" json:"disabled,omitempty"`
+	RequestRef   string            `yaml:"requestRef,omitempty" json:"requestRef,omitempty"`
+	Request      *RequestFile      `yaml:"request,omitempty" json:"request,omitempty"`
+	Assertions   []AssertionFile   `yaml:"assertions,omitempty" json:"assertions,omitempty"`
+	Extractions  []ExtractionFile  `yaml:"extractions,omitempty" json:"extractions,omitempty"`
+	FailPolicy   string            `yaml:"failPolicy,omitempty" json:"failPolicy,omitempty"`
+	TimeoutMs    int               `yaml:"timeoutMs,omitempty" json:"timeoutMs,omitempty"`
+	Retry        *RetryPolicyFile  `yaml:"retry,omitempty" json:"retry,omitempty"`
+	ValidateSpec *bool             `yaml:"validateSpec,omitempty" json:"validateSpec,omitempty"`
+	Extensions   domain.Extensions `yaml:"-" json:"-"`
 }
 
 type AssertionFile struct {
-	Type     string `yaml:"type" json:"type"`
-	Name     string `yaml:"name,omitempty" json:"name,omitempty"`
-	Path     string `yaml:"path,omitempty" json:"path,omitempty"`
-	Operator string `yaml:"operator,omitempty" json:"operator,omitempty"`
-	Expected any    `yaml:"expected" json:"expected"`
-	Schema   string `yaml:"schema,omitempty" json:"schema,omitempty"`
+	Type       string            `yaml:"type" json:"type"`
+	Name       string            `yaml:"name,omitempty" json:"name,omitempty"`
+	Path       string            `yaml:"path,omitempty" json:"path,omitempty"`
+	Operator   string            `yaml:"operator,omitempty" json:"operator,omitempty"`
+	Expected   any               `yaml:"expected" json:"expected"`
+	Schema     string            `yaml:"schema,omitempty" json:"schema,omitempty"`
+	Extensions domain.Extensions `yaml:"-" json:"-"`
 }
 
 type ExtractionFile struct {
-	Name   string `yaml:"name" json:"name"`
-	Source string `yaml:"source" json:"source"`
-	Path   string `yaml:"path,omitempty" json:"path,omitempty"`
+	Name       string            `yaml:"name" json:"name"`
+	Source     string            `yaml:"source" json:"source"`
+	Path       string            `yaml:"path,omitempty" json:"path,omitempty"`
+	Extensions domain.Extensions `yaml:"-" json:"-"`
 }
 
 // ParseScenario decodes a scenario file from YAML or JSON bytes.
@@ -76,6 +81,9 @@ func ParseScenario(data []byte, format string) (*domain.Scenario, error) {
 	if err := checkKeys(data, format, sf); err != nil {
 		return nil, err
 	}
+	if err := readExtensions(data, format, &sf); err != nil {
+		return nil, err
+	}
 	return scenarioFileToDomain(&sf)
 }
 
@@ -88,14 +96,7 @@ func ParseScenarioFile(data []byte, filename string) (*domain.Scenario, error) {
 // WriteScenario encodes a domain.Scenario to YAML or JSON.
 func WriteScenario(s *domain.Scenario, format string) ([]byte, error) {
 	sf := scenarioDomainToFile(s)
-	switch strings.ToLower(format) {
-	case "yaml", "yml":
-		return yaml.Marshal(sf)
-	case "json":
-		return json.MarshalIndent(sf, "", "  ")
-	default:
-		return nil, fmt.Errorf("unknown format %q", format)
-	}
+	return marshalFile(sf, format)
 }
 
 func scenarioFileToDomain(sf *ScenarioFile) (*domain.Scenario, error) {
@@ -105,6 +106,7 @@ func scenarioFileToDomain(sf *ScenarioFile) (*domain.Scenario, error) {
 	s := &domain.Scenario{
 		SchemaVersion: sf.SchemaVersion,
 		Title:         sf.Title,
+		Extensions:    sf.Extensions,
 		Description:   sf.Description,
 		SpecFile:      sf.SpecFile,
 		Variables:     envVarsToDomain(sf.Variables),
@@ -128,11 +130,13 @@ func stepFileToDomain(sf *StepFile) (*domain.ScenarioStep, error) {
 		FailPolicy:   domain.FailPolicy(sf.FailPolicy),
 		TimeoutMs:    sf.TimeoutMs,
 		ValidateSpec: sf.ValidateSpec,
+		Extensions:   sf.Extensions,
 	}
 	if sf.Retry != nil && sf.Retry.MaxAttempts > 0 {
 		step.Retry = &domain.RetryPolicy{
 			MaxAttempts: sf.Retry.MaxAttempts,
 			Delay:       time.Duration(sf.Retry.DelayMs) * time.Millisecond,
+			Extensions:  sf.Retry.Extensions,
 		}
 	}
 	if sf.Request != nil {
@@ -150,6 +154,8 @@ func stepFileToDomain(sf *StepFile) (*domain.ScenarioStep, error) {
 			Operator: domain.Operator(a.Operator),
 			Expected: a.Expected,
 			Schema:   a.Schema,
+
+			Extensions: a.Extensions,
 		})
 	}
 	for _, e := range sf.Extractions {
@@ -157,6 +163,8 @@ func stepFileToDomain(sf *StepFile) (*domain.ScenarioStep, error) {
 			Name:   e.Name,
 			Source: domain.ExtractionSource(e.Source),
 			Path:   e.Path,
+
+			Extensions: e.Extensions,
 		})
 	}
 	return step, nil
@@ -166,6 +174,7 @@ func scenarioDomainToFile(s *domain.Scenario) *ScenarioFile {
 	sf := &ScenarioFile{
 		SchemaVersion: "1",
 		Title:         s.Title,
+		Extensions:    s.Extensions,
 		Description:   s.Description,
 		SpecFile:      s.SpecFile,
 		Variables:     envVarsToFile(s.Variables),
@@ -179,7 +188,7 @@ func scenarioDomainToFile(s *domain.Scenario) *ScenarioFile {
 func envVarsToDomain(vars []EnvVar) []domain.EnvironmentVariable {
 	var out []domain.EnvironmentVariable
 	for _, v := range vars {
-		out = append(out, domain.EnvironmentVariable{Name: v.Name, Value: v.Value, Secret: v.Secret})
+		out = append(out, domain.EnvironmentVariable{Name: v.Name, Value: v.Value, Secret: v.Secret, Extensions: v.Extensions})
 	}
 	return out
 }
@@ -187,7 +196,7 @@ func envVarsToDomain(vars []EnvVar) []domain.EnvironmentVariable {
 func envVarsToFile(vars []domain.EnvironmentVariable) []EnvVar {
 	var out []EnvVar
 	for _, v := range vars {
-		out = append(out, EnvVar{Name: v.Name, Value: v.Value, Secret: v.Secret})
+		out = append(out, EnvVar{Name: v.Name, Value: v.Value, Secret: v.Secret, Extensions: v.Extensions})
 	}
 	return out
 }
@@ -201,11 +210,13 @@ func stepDomainToFile(step *domain.ScenarioStep) StepFile {
 		FailPolicy:   string(step.FailPolicy),
 		TimeoutMs:    step.TimeoutMs,
 		ValidateSpec: step.ValidateSpec,
+		Extensions:   step.Extensions,
 	}
 	if step.Retry != nil && step.Retry.MaxAttempts > 0 {
 		sf.Retry = &RetryPolicyFile{
 			MaxAttempts: step.Retry.MaxAttempts,
 			DelayMs:     int(step.Retry.Delay.Milliseconds()),
+			Extensions:  step.Retry.Extensions,
 		}
 	}
 	if step.Request != nil {
@@ -219,6 +230,8 @@ func stepDomainToFile(step *domain.ScenarioStep) StepFile {
 			Operator: string(a.Operator),
 			Expected: a.Expected,
 			Schema:   a.Schema,
+
+			Extensions: a.Extensions,
 		})
 	}
 	for _, e := range step.Extractions {
@@ -226,6 +239,8 @@ func stepDomainToFile(step *domain.ScenarioStep) StepFile {
 			Name:   e.Name,
 			Source: string(e.Source),
 			Path:   e.Path,
+
+			Extensions: e.Extensions,
 		})
 	}
 	return sf

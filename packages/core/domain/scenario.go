@@ -13,6 +13,7 @@ const (
 type RetryPolicy struct {
 	MaxAttempts int
 	Delay       time.Duration
+	Extensions  Extensions
 }
 
 // ScenarioStep is one step in a Scenario.
@@ -30,6 +31,7 @@ type ScenarioStep struct {
 	Retry        *RetryPolicy
 	TimeoutMs    int
 	ValidateSpec *bool // nil = inherit scenario default; explicit true/false overrides per step
+	Extensions   Extensions
 }
 
 // Scenario is a sequential, multi-step workflow used for Spec Conformance Testing.
@@ -41,6 +43,7 @@ type Scenario struct {
 	// Variables are scenario-scoped values, evaluated once, in order, when the scenario starts. A
 	// value may use {{$functions}}, environment variables and earlier scenario variables, and then
 	// stays the same for the whole run of the scenario.
-	Variables []EnvironmentVariable
-	Steps     []ScenarioStep
+	Variables  []EnvironmentVariable
+	Steps      []ScenarioStep
+	Extensions Extensions
 }

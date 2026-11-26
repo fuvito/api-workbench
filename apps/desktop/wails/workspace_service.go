@@ -88,12 +88,16 @@ type EnvironmentVariableIO struct {
 	Name   string `json:"name"`
 	Value  string `json:"value"`
 	Secret bool   `json:"secret"`
+	// Extensions are the item's x- keys, which the editors carry back unread.
+	Extensions string `json:"extensions,omitempty"`
 }
 
 type EnvironmentIO struct {
 	Path      string                  `json:"path"`
 	Name      string                  `json:"name"`
 	Variables []EnvironmentVariableIO `json:"variables"`
+	// Extensions are the item's x- keys, which the editors carry back unread.
+	Extensions string `json:"extensions,omitempty"`
 }
 
 type RequestFileIO struct {
@@ -112,6 +116,8 @@ type RequestFileIO struct {
 	FilePath string `json:"filePath,omitempty"`
 	// TargetDir overrides the save directory for new (unsaved) requests.
 	TargetDir string `json:"targetDir,omitempty"`
+	// Extensions are the item's x- keys, which the editors carry back unread.
+	Extensions string `json:"extensions,omitempty"`
 }
 
 // ---- WorkspaceService ----
@@ -473,11 +479,27 @@ func (w *WorkspaceService) GetEnvironment(path string) (*EnvironmentIO, error) {
 	if err != nil {
 		return nil, err
 	}
-	out := &EnvironmentIO{Path: path, Name: env.Name}
+	return environmentToIO(env, path), nil
+}
+
+func environmentToIO(env *domain.Environment, path string) *EnvironmentIO {
+	out := &EnvironmentIO{Path: path, Name: env.Name, Extensions: string(env.Extensions)}
 	for _, v := range env.Variables {
-		out.Variables = append(out.Variables, EnvironmentVariableIO{Name: v.Name, Value: v.Value, Secret: v.Secret})
+		out.Variables = append(out.Variables, EnvironmentVariableIO{Name: v.Name, Value: v.Value, Secret: v.Secret, Extensions: string(v.Extensions)})
 	}
-	return out, nil
+	return out
+}
+
+// ParseEnvironmentYAML reads environment text for the editor's form, as loading the file would.
+func (w *WorkspaceService) ParseEnvironmentYAML(content string) (*EnvironmentIO, error) {
+	env, err := serialization.ParseEnvironment([]byte(content), "yaml")
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(env.Name) == "" {
+		return nil, fmt.Errorf("missing required field: name")
+	}
+	return environmentToIO(env, ""), nil
 }
 
 // SaveEnvironment creates or updates an environment file.
@@ -502,12 +524,15 @@ func (w *WorkspaceService) SaveEnvironment(env EnvironmentIO) (*EnvironmentInfoI
 	domEnv := &domain.Environment{
 		SchemaVersion: domain.CurrentSchemaVersion,
 		Name:          env.Name,
+		Extensions:    domain.Extensions(env.Extensions),
 	}
 	for _, v := range env.Variables {
 		domEnv.Variables = append(domEnv.Variables, domain.EnvironmentVariable{
 			Name:   v.Name,
 			Value:  v.Value,
 			Secret: v.Secret,
+
+			Extensions: domain.Extensions(v.Extensions),
 		})
 	}
 
@@ -967,15 +992,16 @@ func domainToRequestFileIO(req *domain.Request) *RequestFileIO {
 		Title:         req.Title,
 		Method:        string(req.Method),
 		URL:           req.URL,
+		Extensions:    string(req.Extensions),
 	}
 	for _, h := range req.Headers {
-		out.Headers = append(out.Headers, HeaderIO{Name: h.Name, Value: h.Value})
+		out.Headers = append(out.Headers, HeaderIO{Name: h.Name, Value: h.Value, Extensions: string(h.Extensions)})
 	}
 	for _, p := range req.QueryParams {
-		out.QueryParams = append(out.QueryParams, QueryParamIO{Name: p.Name, Value: p.Value})
+		out.QueryParams = append(out.QueryParams, QueryParamIO{Name: p.Name, Value: p.Value, Extensions: string(p.Extensions)})
 	}
 	if req.Body != nil {
-		out.Body = &BodyIO{Type: string(req.Body.Type), Content: req.Body.Content}
+		out.Body = &BodyIO{Type: string(req.Body.Type), Content: req.Body.Content, Extensions: string(req.Body.Extensions)}
 	}
 	out.Auth = authDomainToIO(req.Auth)
 	if req.Timeout > 0 {
@@ -990,7 +1016,7 @@ func authDomainToIO(a *domain.Auth) *AuthIO {
 	if a == nil {
 		return nil
 	}
-	af := &AuthIO{Type: string(a.Type)}
+	af := &AuthIO{Type: string(a.Type), Extensions: string(a.Extensions)}
 	if a.Bearer != nil {
 		af.Token = a.Bearer.Token
 	}
@@ -1011,15 +1037,17 @@ func requestFileIOToDomain(r RequestFileIO) *domain.Request {
 		Title:  r.Title,
 		Method: domain.HTTPMethod(r.Method),
 		URL:    r.URL,
+
+		Extensions: domain.Extensions(r.Extensions),
 	}
 	for _, h := range r.Headers {
-		req.Headers = append(req.Headers, domain.Header{Name: h.Name, Value: h.Value})
+		req.Headers = append(req.Headers, domain.Header{Name: h.Name, Value: h.Value, Extensions: domain.Extensions(h.Extensions)})
 	}
 	for _, p := range r.QueryParams {
-		req.QueryParams = append(req.QueryParams, domain.QueryParam{Name: p.Name, Value: p.Value})
+		req.QueryParams = append(req.QueryParams, domain.QueryParam{Name: p.Name, Value: p.Value, Extensions: domain.Extensions(p.Extensions)})
 	}
 	if r.Body != nil {
-		req.Body = &domain.RequestBody{Type: domain.BodyType(r.Body.Type), Content: r.Body.Content}
+		req.Body = &domain.RequestBody{Type: domain.BodyType(r.Body.Type), Content: r.Body.Content, Extensions: domain.Extensions(r.Body.Extensions)}
 	}
 	if r.Auth != nil {
 		req.Auth = inputAuthToDomain(r.Auth)

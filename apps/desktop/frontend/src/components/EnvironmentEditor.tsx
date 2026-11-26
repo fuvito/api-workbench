@@ -2,14 +2,16 @@ import { useState, useEffect, useRef } from 'react'
 import { X, Eye, EyeOff, Trash2, Lock, CopyPlus, ShieldCheck, CheckCircle2, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { inputCls as baseInputCls } from '@/lib/styles'
-import { getEnvironment, saveEnvironment, deleteEnvironment, getEnvironmentRaw, saveEnvironmentRaw, validateEnvironmentYAML } from '@/lib/bridge'
+import { getEnvironment, saveEnvironment, deleteEnvironment, getEnvironmentRaw, saveEnvironmentRaw, validateEnvironmentYAML, parseEnvironmentYAML } from '@/lib/bridge'
 import type { EnvInfo } from '@/lib/bridge'
+import { pushExtensions } from '@/components/scenario-yaml'
 
 interface EnvVar {
   id: string
   name: string
   value: string
   secret: boolean
+  extensions?: string
 }
 
 type Props = {
@@ -21,13 +23,16 @@ type Props = {
   prefilledVarName?: string
 }
 
-function envToYAML(name: string, variables: EnvVar[]): string {
-  const lines: string[] = ['schemaVersion: "1"', `name: ${yamlScalar(name)}`, '', 'variables:']
+function envToYAML(name: string, variables: EnvVar[], extensions?: string): string {
+  const lines: string[] = ['schemaVersion: "1"', `name: ${yamlScalar(name)}`]
+  pushExtensions(lines, '', extensions)
+  lines.push('', 'variables:')
   if (variables.length === 0) lines.push('  []')
   for (const v of variables) {
     lines.push(`  - name: ${yamlScalar(v.name)}`)
     lines.push(`    value: ${yamlScalar(v.value)}`)
     if (v.secret) lines.push(`    secret: true`)
+    pushExtensions(lines, '    ', v.extensions)
   }
   return lines.join('\n') + '\n'
 }
@@ -44,6 +49,8 @@ export function EnvironmentEditor({ envPath, workspacePath, onClose, onSaved, on
   const [mode, setMode] = useState<'form' | 'yaml'>('form')
   const [name, setName] = useState('')
   const [variables, setVariables] = useState<EnvVar[]>([])
+  // the file's own x- keys, written back on save
+  const [extensions, setExtensions] = useState<string>()
   const [yamlText, setYamlText] = useState('')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -58,6 +65,7 @@ export function EnvironmentEditor({ envPath, workspacePath, onClose, onSaved, on
   /* eslint-disable react/set-state-in-effect */
   useEffect(() => {
     setMode('form')
+    setExtensions(undefined)
     if (!envPath) {
       setName('')
       setVariables(prefilledVarName
@@ -72,6 +80,7 @@ export function EnvironmentEditor({ envPath, workspacePath, onClose, onSaved, on
     getEnvironment(envPath)
       .then(env => {
         setName(env.name)
+        setExtensions(env.extensions)
         const vars = env.variables.map(v => ({ id: crypto.randomUUID(), ...v }))
         if (prefilledVarName && !vars.some(v => v.name === prefilledVarName)) {
           setVariables([...vars, { id: crypto.randomUUID(), name: prefilledVarName, value: '', secret: false }])
@@ -104,10 +113,10 @@ export function EnvironmentEditor({ envPath, workspacePath, onClose, onSaved, on
         const raw = await getEnvironmentRaw(envPath)
         setYamlText(raw)
       } catch {
-        setYamlText(envToYAML(name, variables))
+        setYamlText(envToYAML(name, variables, extensions))
       }
     } else {
-      setYamlText(envToYAML(name, variables))
+      setYamlText(envToYAML(name, variables, extensions))
     }
     setMode('yaml')
     setTimeout(() => textareaRef.current?.focus(), 0)
@@ -116,47 +125,14 @@ export function EnvironmentEditor({ envPath, workspacePath, onClose, onSaved, on
   async function handleSwitchToForm() {
     setError('')
     try {
-      const env = await parseYAMLToForm(yamlText)
+      const env = await parseEnvironmentYAML(yamlText)
       setName(env.name)
+      setExtensions(env.extensions)
       setVariables(env.variables.map(v => ({ id: crypto.randomUUID(), ...v })))
       setMode('form')
     } catch (err) {
       setError('Cannot switch to form — fix YAML errors first: ' + String(err))
     }
-  }
-
-  async function parseYAMLToForm(text: string) {
-    // We use the Go serialization parser by writing to a temp parse call.
-    // Since we don't have a standalone parse endpoint, do a lightweight client-side parse
-    // of the YAML structure to extract name + variables.
-    const lines = text.split('\n')
-    let envName = ''
-    const vars: Array<{ name: string; value: string; secret: boolean }> = []
-    let inVariables = false
-    let currentVar: { name?: string; value?: string; secret?: boolean } | null = null
-
-    for (const raw of lines) {
-      const line = raw.trimEnd()
-      if (line.startsWith('name:') && !inVariables) {
-        envName = line.replace(/^name:\s*/, '').replace(/^['"]|['"]$/g, '')
-      } else if (line.startsWith('variables:')) {
-        inVariables = true
-      } else if (inVariables) {
-        const trimmed = line.trimStart()
-        if (trimmed.startsWith('- name:')) {
-          if (currentVar?.name !== undefined) vars.push({ name: currentVar.name ?? '', value: currentVar.value ?? '', secret: !!currentVar.secret })
-          currentVar = { name: trimmed.replace(/^- name:\s*/, '').replace(/^['"]|['"]$/g, '') }
-        } else if (trimmed.startsWith('value:') && currentVar) {
-          currentVar.value = trimmed.replace(/^value:\s*/, '').replace(/^['"]|['"]$/g, '')
-        } else if (trimmed.startsWith('secret:') && currentVar) {
-          currentVar.secret = trimmed.includes('true')
-        }
-      }
-    }
-    if (currentVar?.name !== undefined) vars.push({ name: currentVar.name ?? '', value: currentVar.value ?? '', secret: !!currentVar.secret })
-
-    if (!envName) throw new Error('missing required field: name')
-    return { name: envName, variables: vars }
   }
 
   function addVariable() {
@@ -194,7 +170,8 @@ export function EnvironmentEditor({ envPath, workspacePath, onClose, onSaved, on
         const saved = await saveEnvironment({
           path: envPath ?? '',
           name: name.trim(),
-          variables: variables.map(({ name: n, value, secret }) => ({ name: n, value, secret })),
+          variables: variables.map(({ name: n, value, secret, extensions: own }) => ({ name: n, value, secret, extensions: own })),
+          extensions,
         })
         onSaved(saved)
       }
@@ -212,7 +189,8 @@ export function EnvironmentEditor({ envPath, workspacePath, onClose, onSaved, on
       const saved = await saveEnvironment({
         path: '',
         name: name.trim() + ' Copy',
-        variables: variables.map(({ name: n, value, secret }) => ({ name: n, value, secret })),
+        variables: variables.map(({ name: n, value, secret, extensions: own }) => ({ name: n, value, secret, extensions: own })),
+          extensions,
       })
       onSaved(saved)
     } catch (err) {

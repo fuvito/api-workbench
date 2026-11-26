@@ -558,7 +558,8 @@ Place requests under `requests/`, scenarios under `scenarios/`, environments und
 
 A request, scenario or environment file may hold only the keys this document describes, spelled exactly (also in JSON). **Any other key is an error**, wherever it is, and the message names the spelling probably meant: `unknown key "asertions" in steps[0] (did you mean "assertions"?)`. Releases up to 0.14.1 ignored such a key, so a misspelled `assertions` left a step that checked nothing.
 
-- **Your own keys start with `x-`**, at any level: `x-owner: payments`. They are ignored. The app does not keep them when it saves the file.
+- **Your own keys start with `x-`**, at any level: `x-owner: payments`. They are ignored, and **a save keeps them** with the item they are on, also after you rename or reorder items (releases up to 0.14.1 dropped them). A removed item takes its keys with it, as do a body set to `none`, a changed auth type and a removed retry. A save that rebuilds the file does not keep comments, the order of keys or anchors, and writes a date in an `x-` value as text. The raw YAML editors save the text as typed.
+- **Bundles do not carry `x-` keys:** an export leaves them out, because a bundle is made to be shared, and importing a bundle that has one is refused.
 - A step’s `title` and `description`, and a request’s `description`, which releases up to 0.3 had, are still ignored.
 - Anything may appear inside `expected`.
 - Bundles and `clrsig.yaml` have their own rules, in their sections.

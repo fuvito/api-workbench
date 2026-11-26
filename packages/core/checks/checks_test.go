@@ -41,6 +41,7 @@ var docOnly = map[string]bool{
 	"CS-RUN-022":   true, // import warnings
 	"CS-RUN-023":   true, // the app does not send an undefined value
 	"CS-RUN-024":   true, // a misspelled key is refused
+	"CS-RUN-025":   true, // a save in the app keeps what the file holds
 	"CS-PROBE-005": true, // probes follow the filters
 }
 

@@ -110,6 +110,10 @@ export function OpenWorkspaceByPath(arg1) {
   return window['go']['main']['WorkspaceService']['OpenWorkspaceByPath'](arg1);
 }
 
+export function ParseEnvironmentYAML(arg1) {
+  return window['go']['main']['WorkspaceService']['ParseEnvironmentYAML'](arg1);
+}
+
 export function PickFile(arg1) {
   return window['go']['main']['WorkspaceService']['PickFile'](arg1);
 }

@@ -17,7 +17,8 @@ const (
 // Extraction defines how to pull a value from a Response and store it as a runtime variable.
 // Used in scenario steps to chain request data across steps.
 type Extraction struct {
-	Name   string // variable name to assign
-	Source ExtractionSource
-	Path   string // jsonpath expression or header name
+	Name       string // variable name to assign
+	Source     ExtractionSource
+	Path       string // jsonpath expression or header name
+	Extensions Extensions
 }

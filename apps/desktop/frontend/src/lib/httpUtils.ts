@@ -109,24 +109,26 @@ export function formatSize(bytes: number): string {
 }
 
 export function authStateToPayload(auth: AuthState): AuthPayload | undefined {
+  const kept = auth.extensions ? { extensions: auth.extensions } : {}
   if (auth.type === 'bearer') {
-    return { type: 'bearer', token: auth.token, username: '', password: '', key: '', value: '', location: '' }
+    return { type: 'bearer', token: auth.token, username: '', password: '', key: '', value: '', location: '', ...kept }
   }
   if (auth.type === 'basic') {
-    return { type: 'basic', token: '', username: auth.username, password: auth.password, key: '', value: '', location: '' }
+    return { type: 'basic', token: '', username: auth.username, password: auth.password, key: '', value: '', location: '', ...kept }
   }
   if (auth.type === 'apikey') {
-    return { type: 'apikey', token: '', username: '', password: '', key: auth.key, value: auth.value, location: auth.location }
+    return { type: 'apikey', token: '', username: '', password: '', key: auth.key, value: auth.value, location: auth.location, ...kept }
   }
   return undefined
 }
 
 export function authPayloadToState(a?: AuthPayload | null): AuthState {
   if (!a) return { type: 'none' }
-  if (a.type === 'bearer') return { type: 'bearer', token: a.token ?? '' }
-  if (a.type === 'basic') return { type: 'basic', username: a.username ?? '', password: a.password ?? '' }
+  const kept = a.extensions ? { extensions: a.extensions } : {}
+  if (a.type === 'bearer') return { type: 'bearer', token: a.token ?? '', ...kept }
+  if (a.type === 'basic') return { type: 'basic', username: a.username ?? '', password: a.password ?? '', ...kept }
   if (a.type === 'apikey') {
-    return { type: 'apikey', key: a.key ?? '', value: a.value ?? '', location: (a.location as 'header' | 'query') || 'header' }
+    return { type: 'apikey', key: a.key ?? '', value: a.value ?? '', location: (a.location as 'header' | 'query') || 'header', ...kept }
   }
   return { type: 'none' }
 }
@@ -139,8 +141,8 @@ export function requestFileIOToState(r: RequestFileIO): {
   body: BodyState
   auth: AuthState
 } {
-  const toKV = (pairs: Array<{ name: string; value: string }> = []): KVPair[] =>
-    pairs.map(p => ({ id: crypto.randomUUID(), name: p.name, value: p.value, enabled: true }))
+  const toKV = (pairs: Array<{ name: string; value: string; extensions?: string }> = []): KVPair[] =>
+    pairs.map(p => ({ id: crypto.randomUUID(), name: p.name, value: p.value, enabled: true, extensions: p.extensions }))
 
   const auth = authPayloadToState(r.auth)
 
@@ -153,7 +155,7 @@ export function requestFileIOToState(r: RequestFileIO): {
     url: r.url ?? '',
     headers: toKV(r.headers),
     queryParams: toKV(r.queryParams),
-    body: r.body ? { type: r.body.type as BodyState['type'], content: r.body.content } : { type: 'none', content: '' },
+    body: r.body ? { type: r.body.type as BodyState['type'], content: r.body.content, extensions: r.body.extensions } : { type: 'none', content: '' },
     auth,
   }
 }

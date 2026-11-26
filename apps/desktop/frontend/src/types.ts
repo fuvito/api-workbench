@@ -36,6 +36,7 @@ export type KVPair = {
   name: string
   value: string
   enabled: boolean
+  extensions?: string
 }
 
 export type BodyType = 'none' | 'json' | 'raw' | 'form-urlencoded' | 'multipart'
@@ -43,12 +44,14 @@ export type BodyType = 'none' | 'json' | 'raw' | 'form-urlencoded' | 'multipart'
 export type BodyState = {
   type: BodyType
   content: string
+  extensions?: string
 }
 
 export type AuthType = 'none' | 'bearer' | 'basic' | 'apikey'
 
-export type AuthState =
+export type AuthState = { extensions?: string } & (
   | { type: 'none' }
   | { type: 'bearer'; token: string }
   | { type: 'basic'; username: string; password: string }
   | { type: 'apikey'; key: string; value: string; location: 'header' | 'query' }
+)

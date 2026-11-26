@@ -26,12 +26,13 @@ const (
 // Assertion defines a single check against an HTTP response.
 // Expected is any because valid values include strings, numbers, and booleans.
 type Assertion struct {
-	Type     AssertionType
-	Name     string   // optional label for reports
-	Path     string   // header name or jsonpath expression
-	Operator Operator // defaults to OperatorEq when empty
-	Expected any
-	Schema   string // inline JSON Schema document for AssertionSchema assertions
+	Type       AssertionType
+	Name       string   // optional label for reports
+	Path       string   // header name or jsonpath expression
+	Operator   Operator // defaults to OperatorEq when empty
+	Expected   any
+	Schema     string // inline JSON Schema document for AssertionSchema assertions
+	Extensions Extensions
 }
 
 // AssertionResult records whether a single Assertion passed.

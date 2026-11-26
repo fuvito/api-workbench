@@ -37,18 +37,21 @@ const (
 )
 
 type Header struct {
-	Name  string
-	Value string
+	Name       string
+	Value      string
+	Extensions Extensions
 }
 
 type QueryParam struct {
-	Name  string
-	Value string
+	Name       string
+	Value      string
+	Extensions Extensions
 }
 
 type RequestBody struct {
-	Type    BodyType
-	Content string
+	Type       BodyType
+	Content    string
+	Extensions Extensions
 }
 
 // Request is the canonical definition of an HTTP request.
@@ -67,6 +70,7 @@ type Request struct {
 	// spec declares can be validated. The zero value keeps the default: follow redirects.
 	NoFollowRedirects bool
 	Assertions        []Assertion
+	Extensions        Extensions
 }
 
 func (r *Request) Validate() error {

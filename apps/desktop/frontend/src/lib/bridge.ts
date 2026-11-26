@@ -24,6 +24,7 @@ import {
   GetActiveEnvironment as WailsGetActiveEnvironment,
   GetCloseReminder as WailsGetCloseReminder,
   GetEnvironment as WailsGetEnvironment,
+  ParseEnvironmentYAML as WailsParseEnvironmentYAML,
   SaveEnvironment as WailsSaveEnvironment,
   DeleteEnvironment as WailsDeleteEnvironment,
   GetEnvironmentRaw as WailsGetEnvironmentRaw,
@@ -146,22 +147,30 @@ import {
 export interface Header {
   name: string
   value: string
+  /** The item's x- keys from its file, carried with it and written back on save; never read here. */
+  extensions?: string
 }
 
 export interface QueryParam {
   name: string
   value: string
+  /** The item's x- keys from its file, carried with it and written back on save; never read here. */
+  extensions?: string
 }
 
 /** A header or query parameter of a scenario step's request. */
 export interface KVPair {
   name: string
   value: string
+  /** The item's x- keys from its file, carried with it and written back on save; never read here. */
+  extensions?: string
 }
 
 export interface RequestBody {
   type: string
   content: string
+  /** The item's x- keys from its file, carried with it and written back on save; never read here. */
+  extensions?: string
 }
 
 export interface CliPart {
@@ -208,6 +217,8 @@ export interface AuthPayload {
   key: string
   value: string
   location: string
+  /** The item's x- keys from its file, carried with it and written back on save; never read here. */
+  extensions?: string
 }
 
 export interface RequestPayload {
@@ -302,6 +313,8 @@ export interface RequestFileIO {
   noFollowRedirects?: boolean
   filePath?: string
   targetDir?: string
+  /** The item's x- keys from its file, carried with it and written back on save; never read here. */
+  extensions?: string
 }
 
 // ---- App lifecycle ----
@@ -429,12 +442,21 @@ export interface EnvironmentVariable {
   name: string
   value: string
   secret: boolean
+  /** The item's x- keys from its file, carried with it and written back on save; never read here. */
+  extensions?: string
 }
 
 export interface EnvironmentIO {
   path: string
   name: string
   variables: EnvironmentVariable[]
+  /** The item's x- keys from its file, carried with it and written back on save; never read here. */
+  extensions?: string
+}
+
+export async function parseEnvironmentYAML(content: string): Promise<EnvironmentIO> {
+  const result = await WailsParseEnvironmentYAML(content)
+  return result as unknown as EnvironmentIO
 }
 
 export async function getEnvironment(path: string): Promise<EnvironmentIO> {
@@ -1101,12 +1123,17 @@ export interface AssertionDetail {
   operator?: string
   expected?: unknown
   schema?: string
+  /** The item's x- keys from its file, carried with it and written back on save; never read here. */
+  extensions?: string
+  name?: string
 }
 
 export interface ExtractionDetail {
   name: string
   source: string
   path?: string
+  /** The item's x- keys from its file, carried with it and written back on save; never read here. */
+  extensions?: string
 }
 
 export interface StepDetail {
@@ -1128,6 +1155,14 @@ export interface StepDetail {
   retryDelayMs?: number
   noFollowRedirects?: boolean
   auth?: AuthPayload
+  /** The item's x- keys from its file, carried with it and written back on save; never read here. */
+  extensions?: string
+  /** What the editor does not show of the step's request, body and retry, kept for saving. */
+  requestTitle?: string
+  requestTimeout?: string
+  requestExtensions?: string
+  bodyExtensions?: string
+  retryExtensions?: string
 }
 
 export interface ScenarioDetail {
@@ -1138,12 +1173,16 @@ export interface ScenarioDetail {
   variables?: ScenarioVariable[]
   steps: StepDetail[]
   error?: string
+  /** The item's x- keys from its file, carried with it and written back on save; never read here. */
+  extensions?: string
 }
 
 export interface ScenarioVariable {
   name: string
   value: string
   secret?: boolean
+  /** The item's x- keys from its file, carried with it and written back on save; never read here. */
+  extensions?: string
 }
 
 export interface AssertionResult {

@@ -25,27 +25,31 @@ type RequestFile struct {
 	Auth          *AuthFile `yaml:"auth,omitempty" json:"auth,omitempty"`
 	Timeout       string    `yaml:"timeout,omitempty" json:"timeout,omitempty"` // e.g. "30s"
 	// FollowRedirects defaults to true; false returns a 3xx response instead of following it.
-	FollowRedirects *bool `yaml:"followRedirects,omitempty" json:"followRedirects,omitempty"`
+	FollowRedirects *bool             `yaml:"followRedirects,omitempty" json:"followRedirects,omitempty"`
+	Extensions      domain.Extensions `yaml:"-" json:"-"`
 }
 
 type KVPair struct {
-	Name  string `yaml:"name" json:"name"`
-	Value string `yaml:"value" json:"value"`
+	Name       string            `yaml:"name" json:"name"`
+	Value      string            `yaml:"value" json:"value"`
+	Extensions domain.Extensions `yaml:"-" json:"-"`
 }
 
 type BodyFile struct {
-	Type    string `yaml:"type" json:"type"`
-	Content string `yaml:"content" json:"content"`
+	Type       string            `yaml:"type" json:"type"`
+	Content    string            `yaml:"content" json:"content"`
+	Extensions domain.Extensions `yaml:"-" json:"-"`
 }
 
 type AuthFile struct {
-	Type     string `yaml:"type" json:"type"`
-	Token    string `yaml:"token,omitempty" json:"token,omitempty"`
-	Username string `yaml:"username,omitempty" json:"username,omitempty"`
-	Password string `yaml:"password,omitempty" json:"password,omitempty"`
-	Key      string `yaml:"key,omitempty" json:"key,omitempty"`
-	Value    string `yaml:"value,omitempty" json:"value,omitempty"`
-	Location string `yaml:"location,omitempty" json:"location,omitempty"`
+	Type       string            `yaml:"type" json:"type"`
+	Token      string            `yaml:"token,omitempty" json:"token,omitempty"`
+	Username   string            `yaml:"username,omitempty" json:"username,omitempty"`
+	Password   string            `yaml:"password,omitempty" json:"password,omitempty"`
+	Key        string            `yaml:"key,omitempty" json:"key,omitempty"`
+	Value      string            `yaml:"value,omitempty" json:"value,omitempty"`
+	Location   string            `yaml:"location,omitempty" json:"location,omitempty"`
+	Extensions domain.Extensions `yaml:"-" json:"-"`
 }
 
 // ParseRequest decodes a request file from YAML or JSON bytes.
@@ -70,6 +74,9 @@ func ParseRequest(data []byte, format string) (*domain.Request, error) {
 	if err := checkKeys(data, format, rf); err != nil {
 		return nil, err
 	}
+	if err := readExtensions(data, format, &rf); err != nil {
+		return nil, err
+	}
 	return requestFileToDomain(&rf)
 }
 
@@ -82,14 +89,7 @@ func ParseRequestFile(data []byte, filename string) (*domain.Request, error) {
 // WriteRequest encodes a domain.Request to YAML or JSON.
 func WriteRequest(req *domain.Request, format string) ([]byte, error) {
 	rf := requestDomainToFile(req)
-	switch strings.ToLower(format) {
-	case "yaml", "yml":
-		return yaml.Marshal(rf)
-	case "json":
-		return json.MarshalIndent(rf, "", "  ")
-	default:
-		return nil, fmt.Errorf("unknown format %q; expected yaml or json", format)
-	}
+	return marshalFile(rf, format)
 }
 
 func requestFileToDomain(rf *RequestFile) (*domain.Request, error) {
@@ -106,18 +106,19 @@ func requestFileToDomain(rf *RequestFile) (*domain.Request, error) {
 	req := &domain.Request{
 		SchemaVersion: rf.SchemaVersion,
 		Title:         rf.Title,
+		Extensions:    rf.Extensions,
 		Method:        domain.HTTPMethod(strings.ToUpper(rf.Method)),
 		URL:           rf.URL,
 	}
 
 	for _, h := range rf.Headers {
-		req.Headers = append(req.Headers, domain.Header{Name: h.Name, Value: h.Value})
+		req.Headers = append(req.Headers, domain.Header{Name: h.Name, Value: h.Value, Extensions: h.Extensions})
 	}
 	for _, p := range rf.QueryParams {
-		req.QueryParams = append(req.QueryParams, domain.QueryParam{Name: p.Name, Value: p.Value})
+		req.QueryParams = append(req.QueryParams, domain.QueryParam{Name: p.Name, Value: p.Value, Extensions: p.Extensions})
 	}
 	if rf.Body != nil {
-		req.Body = &domain.RequestBody{Type: domain.BodyType(rf.Body.Type), Content: rf.Body.Content}
+		req.Body = &domain.RequestBody{Type: domain.BodyType(rf.Body.Type), Content: rf.Body.Content, Extensions: rf.Body.Extensions}
 	}
 	if rf.Auth != nil {
 		req.Auth = authFileToDomain(rf.Auth)
@@ -137,7 +138,7 @@ func requestFileToDomain(rf *RequestFile) (*domain.Request, error) {
 }
 
 func authFileToDomain(a *AuthFile) *domain.Auth {
-	auth := &domain.Auth{Type: domain.AuthType(a.Type)}
+	auth := &domain.Auth{Type: domain.AuthType(a.Type), Extensions: a.Extensions}
 	switch auth.Type {
 	case domain.AuthBearer:
 		auth.Bearer = &domain.BearerAuth{Token: a.Token}
@@ -153,17 +154,18 @@ func requestDomainToFile(req *domain.Request) *RequestFile {
 	rf := &RequestFile{
 		SchemaVersion: "1",
 		Title:         req.Title,
+		Extensions:    req.Extensions,
 		Method:        string(req.Method),
 		URL:           req.URL,
 	}
 	for _, h := range req.Headers {
-		rf.Headers = append(rf.Headers, KVPair{Name: h.Name, Value: h.Value})
+		rf.Headers = append(rf.Headers, KVPair{Name: h.Name, Value: h.Value, Extensions: h.Extensions})
 	}
 	for _, p := range req.QueryParams {
-		rf.QueryParams = append(rf.QueryParams, KVPair{Name: p.Name, Value: p.Value})
+		rf.QueryParams = append(rf.QueryParams, KVPair{Name: p.Name, Value: p.Value, Extensions: p.Extensions})
 	}
 	if req.Body != nil {
-		rf.Body = &BodyFile{Type: string(req.Body.Type), Content: req.Body.Content}
+		rf.Body = &BodyFile{Type: string(req.Body.Type), Content: req.Body.Content, Extensions: req.Body.Extensions}
 	}
 	if req.Auth != nil {
 		rf.Auth = authDomainToFile(req.Auth)
@@ -179,7 +181,7 @@ func requestDomainToFile(req *domain.Request) *RequestFile {
 }
 
 func authDomainToFile(a *domain.Auth) *AuthFile {
-	af := &AuthFile{Type: string(a.Type)}
+	af := &AuthFile{Type: string(a.Type), Extensions: a.Extensions}
 	if a.Bearer != nil {
 		af.Token = a.Bearer.Token
 	}

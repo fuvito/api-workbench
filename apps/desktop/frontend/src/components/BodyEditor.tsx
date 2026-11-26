@@ -196,7 +196,7 @@ export function BodyEditor({ body, onChange, onPickFile }: Props) {
   function switchType(t: BodyType) {
     if (t === 'form-urlencoded') setFormPairs(parseFormPairs(body.content))
     if (t === 'multipart') setMultipartFields(parseMultipartContent(body.content))
-    onChange({ type: t, content: t === 'none' ? '' : body.content })
+    onChange({ ...body, type: t, content: t === 'none' ? '' : body.content })
   }
 
   const [formatError, setFormatError] = useState(false)
@@ -209,12 +209,12 @@ export function BodyEditor({ body, onChange, onPickFile }: Props) {
 
   function handleFormPairsChange(pairs: KVPair[]) {
     setFormPairs(pairs)
-    onChange({ type: 'form-urlencoded', content: serializeFormPairs(pairs) })
+    onChange({ ...body, type: 'form-urlencoded', content: serializeFormPairs(pairs) })
   }
 
   function handleMultipartChange(fields: MultipartField[]) {
     setMultipartFields(fields)
-    onChange({ type: 'multipart', content: serializeMultipartContent(fields) })
+    onChange({ ...body, type: 'multipart', content: serializeMultipartContent(fields) })
   }
 
   const defaultPickFile = async () => ''

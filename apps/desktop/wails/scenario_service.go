@@ -43,6 +43,8 @@ type ScenarioInfoIO struct {
 type KVPairIO struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
+	// Extensions are the item's x- keys, which the editors carry back unread.
+	Extensions string `json:"extensions,omitempty"`
 }
 
 type AssertionDetailIO struct {
@@ -51,12 +53,17 @@ type AssertionDetailIO struct {
 	Operator string      `json:"operator,omitempty"`
 	Expected interface{} `json:"expected,omitempty"`
 	Schema   string      `json:"schema,omitempty"`
+	// Extensions are the item's x- keys, which the editors carry back unread.
+	Extensions string `json:"extensions,omitempty"`
+	Name       string `json:"name,omitempty"`
 }
 
 type ExtractionDetailIO struct {
 	Name   string `json:"name"`
 	Source string `json:"source"`
 	Path   string `json:"path,omitempty"`
+	// Extensions are the item's x- keys, which the editors carry back unread.
+	Extensions string `json:"extensions,omitempty"`
 }
 
 type StepDetailIO struct {
@@ -80,6 +87,14 @@ type StepDetailIO struct {
 	NoFollowRedirects bool `json:"noFollowRedirects,omitempty"`
 	// Auth is the step request's auth block; the editor keeps it so saving does not drop it.
 	Auth *AuthIO `json:"auth,omitempty"`
+	// Extensions are the item's x- keys, which the editors carry back unread.
+	Extensions string `json:"extensions,omitempty"`
+	// what the editor does not show of the step's request, body and retry, kept for saving
+	RequestTitle      string `json:"requestTitle,omitempty"`
+	RequestTimeout    string `json:"requestTimeout,omitempty"`
+	RequestExtensions string `json:"requestExtensions,omitempty"`
+	BodyExtensions    string `json:"bodyExtensions,omitempty"`
+	RetryExtensions   string `json:"retryExtensions,omitempty"`
 }
 
 // VariableIO is a scenario variable; the editor keeps them so saving does not drop them.
@@ -87,6 +102,8 @@ type VariableIO struct {
 	Name   string `json:"name"`
 	Value  string `json:"value"`
 	Secret bool   `json:"secret,omitempty"`
+	// Extensions are the item's x- keys, which the editors carry back unread.
+	Extensions string `json:"extensions,omitempty"`
 }
 
 type ScenarioDetailIO struct {
@@ -97,6 +114,8 @@ type ScenarioDetailIO struct {
 	Variables   []VariableIO   `json:"variables,omitempty"`
 	Steps       []StepDetailIO `json:"steps"`
 	Error       string         `json:"error,omitempty"`
+	// Extensions are the item's x- keys, which the editors carry back unread.
+	Extensions string `json:"extensions,omitempty"`
 }
 
 type AssertionResultIO struct {
@@ -311,9 +330,10 @@ func (s *ScenarioService) LoadScenario(path string) ScenarioDetailIO {
 		Title:       sc.Title,
 		Description: sc.Description,
 		SpecFile:    sc.SpecFile,
+		Extensions:  string(sc.Extensions),
 	}
 	for _, v := range sc.Variables {
-		detail.Variables = append(detail.Variables, VariableIO{Name: v.Name, Value: v.Value, Secret: v.Secret})
+		detail.Variables = append(detail.Variables, VariableIO{Name: v.Name, Value: v.Value, Secret: v.Secret, Extensions: string(v.Extensions)})
 	}
 	for _, step := range sc.Steps {
 		sd := StepDetailIO{
@@ -323,6 +343,7 @@ func (s *ScenarioService) LoadScenario(path string) ScenarioDetailIO {
 			RequestRef:  step.RequestRef,
 			FailPolicy:  string(step.FailPolicy),
 			TimeoutMs:   step.TimeoutMs,
+			Extensions:  string(step.Extensions),
 			Headers:     []KVPairIO{},
 			QueryParams: []KVPairIO{},
 			Assertions:  []AssertionDetailIO{},
@@ -331,30 +352,40 @@ func (s *ScenarioService) LoadScenario(path string) ScenarioDetailIO {
 		if step.Retry != nil && step.Retry.MaxAttempts > 0 {
 			sd.RetryMaxAttempts = step.Retry.MaxAttempts
 			sd.RetryDelayMs = int(step.Retry.Delay.Milliseconds())
+			sd.RetryExtensions = string(step.Retry.Extensions)
 		}
 		if step.Request != nil {
 			sd.Method = string(step.Request.Method)
 			sd.URL = step.Request.URL
 			sd.NoFollowRedirects = step.Request.NoFollowRedirects
 			sd.Auth = authDomainToIO(step.Request.Auth)
+			sd.RequestTitle = step.Request.Title
+			sd.RequestExtensions = string(step.Request.Extensions)
+			if step.Request.Timeout > 0 {
+				sd.RequestTimeout = step.Request.Timeout.String()
+			}
 			for _, h := range step.Request.Headers {
-				sd.Headers = append(sd.Headers, KVPairIO{Name: h.Name, Value: h.Value})
+				sd.Headers = append(sd.Headers, KVPairIO{Name: h.Name, Value: h.Value, Extensions: string(h.Extensions)})
 			}
 			for _, q := range step.Request.QueryParams {
-				sd.QueryParams = append(sd.QueryParams, KVPairIO{Name: q.Name, Value: q.Value})
+				sd.QueryParams = append(sd.QueryParams, KVPairIO{Name: q.Name, Value: q.Value, Extensions: string(q.Extensions)})
 			}
 			if step.Request.Body != nil && step.Request.Body.Type != "" {
 				sd.BodyType = string(step.Request.Body.Type)
 				sd.BodyContent = step.Request.Body.Content
+				sd.BodyExtensions = string(step.Request.Body.Extensions)
 			}
 		}
 		for _, a := range step.Assertions {
 			sd.Assertions = append(sd.Assertions, AssertionDetailIO{
 				Type:     string(a.Type),
+				Name:     a.Name,
 				Path:     a.Path,
 				Operator: string(a.Operator),
 				Expected: a.Expected,
 				Schema:   a.Schema,
+
+				Extensions: string(a.Extensions),
 			})
 		}
 		for _, e := range step.Extractions {
@@ -362,6 +393,8 @@ func (s *ScenarioService) LoadScenario(path string) ScenarioDetailIO {
 				Name:   e.Name,
 				Source: string(e.Source),
 				Path:   e.Path,
+
+				Extensions: string(e.Extensions),
 			})
 		}
 		detail.Steps = append(detail.Steps, sd)

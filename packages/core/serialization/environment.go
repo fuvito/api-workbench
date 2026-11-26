@@ -12,15 +12,17 @@ import (
 
 // EnvironmentFile is the on-disk representation of an Environment.
 type EnvironmentFile struct {
-	SchemaVersion string   `yaml:"schemaVersion" json:"schemaVersion"`
-	Name          string   `yaml:"name" json:"name"`
-	Variables     []EnvVar `yaml:"variables" json:"variables"`
+	SchemaVersion string            `yaml:"schemaVersion" json:"schemaVersion"`
+	Name          string            `yaml:"name" json:"name"`
+	Variables     []EnvVar          `yaml:"variables" json:"variables"`
+	Extensions    domain.Extensions `yaml:"-" json:"-"`
 }
 
 type EnvVar struct {
-	Name   string `yaml:"name" json:"name"`
-	Value  string `yaml:"value" json:"value"`
-	Secret bool   `yaml:"secret,omitempty" json:"secret,omitempty"`
+	Name       string            `yaml:"name" json:"name"`
+	Value      string            `yaml:"value" json:"value"`
+	Secret     bool              `yaml:"secret,omitempty" json:"secret,omitempty"`
+	Extensions domain.Extensions `yaml:"-" json:"-"`
 }
 
 // ParseEnvironment decodes an environment file from YAML or JSON bytes.
@@ -44,6 +46,9 @@ func ParseEnvironment(data []byte, format string) (*domain.Environment, error) {
 	if err := checkKeys(data, format, ef); err != nil {
 		return nil, err
 	}
+	if err := readExtensions(data, format, &ef); err != nil {
+		return nil, err
+	}
 	return envFileToDomain(&ef), nil
 }
 
@@ -56,23 +61,19 @@ func ParseEnvironmentFile(data []byte, filename string) (*domain.Environment, er
 // WriteEnvironment encodes a domain.Environment to YAML or JSON.
 func WriteEnvironment(env *domain.Environment, format string) ([]byte, error) {
 	ef := envDomainToFile(env)
-	switch strings.ToLower(format) {
-	case "yaml", "yml":
-		return yaml.Marshal(ef)
-	case "json":
-		return json.MarshalIndent(ef, "", "  ")
-	default:
-		return nil, fmt.Errorf("unknown format %q; expected yaml or json", format)
-	}
+	return marshalFile(ef, format)
 }
 
 func envFileToDomain(ef *EnvironmentFile) *domain.Environment {
 	env := domain.NewEnvironment(ef.Name)
+	env.Extensions = ef.Extensions
 	for _, v := range ef.Variables {
 		env.Variables = append(env.Variables, domain.EnvironmentVariable{
 			Name:   v.Name,
 			Value:  v.Value,
 			Secret: v.Secret,
+
+			Extensions: v.Extensions,
 		})
 	}
 	return env
@@ -82,12 +83,15 @@ func envDomainToFile(env *domain.Environment) *EnvironmentFile {
 	ef := &EnvironmentFile{
 		SchemaVersion: "1",
 		Name:          env.Name,
+		Extensions:    env.Extensions,
 	}
 	for _, v := range env.Variables {
 		ef.Variables = append(ef.Variables, EnvVar{
 			Name:   v.Name,
 			Value:  v.Value,
 			Secret: v.Secret,
+
+			Extensions: v.Extensions,
 		})
 	}
 	return ef

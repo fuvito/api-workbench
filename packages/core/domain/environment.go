@@ -8,12 +8,14 @@ type Environment struct {
 	SchemaVersion string
 	Name          string
 	Variables     []EnvironmentVariable
+	Extensions    Extensions
 }
 
 type EnvironmentVariable struct {
-	Name   string
-	Value  string
-	Secret bool // redacted in UI, logs, and reports; value should reference an env var in CI/CD
+	Name       string
+	Value      string
+	Secret     bool // redacted in UI, logs, and reports; value should reference an env var in CI/CD
+	Extensions Extensions
 }
 
 func NewEnvironment(name string) *Environment {

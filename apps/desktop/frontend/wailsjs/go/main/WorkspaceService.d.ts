@@ -57,6 +57,8 @@ export function OpenWorkspace():Promise<string>;
 
 export function OpenWorkspaceByPath(arg1:string):Promise<string>;
 
+export function ParseEnvironmentYAML(arg1:string):Promise<main.EnvironmentIO>;
+
 export function PickFile(arg1:string):Promise<string>;
 
 export function RenameFolder(arg1:string,arg2:string):Promise<string>;
