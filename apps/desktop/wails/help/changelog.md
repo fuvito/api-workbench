@@ -3,6 +3,20 @@
 What changed in each release, newest first. The About dialog shows this file (Release notes), and its first
 entry is the version the app reports. One `## <version> — <date>` heading per release, one `- ` line per change.
 
+## 0.15.0 — 2026-11-26
+
+- Read before upgrading (user guide, Troubleshooting, Upgrading to 0.15.0): some runs that passed can now fail
+- An unknown key in a request, scenario or environment file is refused, with the spelling probably meant. Keys of your own start with x-
+- format: uri and format: hostname are now checked
+- Negative probes: a refusal with a status that does not fit the fault now warns, and a 429 is reported as not checked instead of passed. With --fail-on warning, both fail the run
+- Fixes saving from the visual scenario editor, which dropped an assertion's name and a step request's title and timeout, and wrote a list or object under expected as text. Compare scenarios saved with 0.14.1 or earlier with your version control
+- Saving in the app keeps your x- keys
+- --max-response-time-for also takes a tag or one operation
+- GitHub pull request annotations for diff and bundle run (--format github)
+- bundle run --workspace records coverage, and the bundle import dialog can copy its command
+- What We Check opens as a searchable table, and the About dialog shows the release notes
+- The Demo and Conformance Server workspaces include a clrsig.yaml
+
 ## 0.14.1 — 2026-11-26
 
 - Fixes recorded coverage in 0.14.0: when a scenario named its spec with a ../ path and another file existed at that path beside the workspace, older coverage could move to that other spec. Coverage already moved is not moved back (see the user guide, Upgrading)
