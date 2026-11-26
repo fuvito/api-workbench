@@ -246,7 +246,7 @@ func mcpToolList() []map[string]interface{} {
 					"allowWrites":        map[string]interface{}{"type": "boolean", "description": "Also send POST, PUT, PATCH and DELETE, which change data on the server (default: false). Refused unless the person who configured the server started it with --allow-writes, and when the project file says conform.readOnly: true. Ask the user before using it."},
 					"failOn":             map[string]interface{}{"type": "string", "enum": []string{"failure", "warning"}, "description": "failure (default) or warning: warnings are reported but only fail the run when this is warning"},
 					"maxResponseTime":    map[string]interface{}{"type": "integer", "description": "Slowest acceptable response in milliseconds; a slower response is a violation (optional, 0 = off)"},
-					"maxResponseTimeFor": map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}, "description": "Different limits for path prefixes, each as /prefix=ms, for example /reports=2000 (optional; the longest prefix wins; 0 = no limit there)"},
+					"maxResponseTimeFor": map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}, "description": "Different limits, each as /prefix=ms, tag:name=ms or 'GET /path=ms' (optional; an operation wins over a path prefix, the longest prefix over tags, the strictest tag holds; 0 = no limit)"},
 				},
 				"required": []string{"spec"},
 			},

@@ -44,7 +44,7 @@ The spec can be left out when a `clrsig.yaml` project file names it.
 | `--fail-on` | `failure`, or `warning` to fail on warnings too. | `failure`. Today every finding of `conform` is a failure. |
 | `--request-timeout` | How long to wait for one answer, in milliseconds. | `10000` |
 | `--max-response-time` | Fails an operation that takes longer than this many milliseconds. | No limit. Leave a margin: it measures wall-clock time. |
-| `--max-response-time-for` | `/prefix=ms`: another limit for the operations under a path. Repeatable. | The longest matching path wins; `0` turns the limit off there. |
+| `--max-response-time-for` | Another limit: `/prefix=ms`, `tag:name=ms` or `"GET /path=ms"`. Repeatable. | An operation wins over a path, a path (the longest) over tags; the strictest tag holds. `0` turns it off. A rule that matches nothing changes nothing. |
 | `--format`, `-f` | What is printed: `text`, `json`, `junit`, `html`, `markdown`, or `github` (annotations on a pull request). | `text` |
 | `--output`, `-o` | Writes that output to a file instead; folders are created. | |
 | `--report` | `format=file`: **also** write another report from the same run. Repeatable. | Not `github`. |

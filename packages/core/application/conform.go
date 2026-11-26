@@ -31,7 +31,7 @@ type ConformInput struct {
 	FailFast          bool
 	RequestTimeoutMs  int            // 0 means DefaultConformRequestTimeoutMs
 	MaxResponseTimeMs int            // 0 means no response-time limit
-	PathLimits        map[string]int // per path prefix; the longest prefix wins over MaxResponseTimeMs
+	PathLimits        map[string]int // see conformance.Options.PathLimits
 	ReadOnly          bool           // send only GET and HEAD operations
 	// OnlyOperations limits the run to these operations (METHOD path as the spec writes it); nil means
 	// all. An empty, non-nil set selects nothing and the run passes with NOTHING CHECKED.

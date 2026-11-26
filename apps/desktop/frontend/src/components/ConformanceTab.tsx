@@ -486,8 +486,8 @@ export function ConformanceTab({ onOpenCliBuilder, request, onSelectionChange, o
               rows={2} placeholder="/reports=2000" spellCheck={false} className={cn(inputClass, 'font-mono')}
             />
             {pathLimits.bad.length > 0
-              ? <p role="alert" className="text-[11px] text-red-400">Use /path-prefix=milliseconds, one per line: {pathLimits.bad.join(', ')}</p>
-              : <p className="text-[11px] text-[var(--color-muted-foreground)]">One /prefix=ms per line. The longest matching prefix wins over the limit above; 0 turns the limit off there. Not carried into Get CLI command.</p>}
+              ? <p role="alert" className="text-[11px] text-red-400">Use /path-prefix=ms, tag:name=ms or GET /path=ms, one per line: {pathLimits.bad.join(', ')}</p>
+              : <p className="text-[11px] text-[var(--color-muted-foreground)]">One per line: /prefix=ms, tag:name=ms or GET /path=ms. An operation wins over a path prefix, and a prefix over tags; the strictest tag holds. Each wins over the limit above; 0 turns it off. Not carried into Get CLI command.</p>}
           </div>
           <div className="mt-3 flex flex-col gap-1">
             <label htmlFor="conf-vars" className="text-xs font-medium">Variable overrides</label>

@@ -40,15 +40,17 @@ export function splitList(text: string): string[] {
   return text.split(',').map(t => t.trim()).filter(Boolean)
 }
 
-// Reads the "/prefix=milliseconds" lines of the per-path response-time limits; `bad` lists the lines
-// that do not fit, so the page can say which.
+// Reads the lines of the other response-time limits: "/prefix=ms", "tag:name=ms" or "GET /path=ms".
+// `bad` lists the lines that do not fit, so the page can say which. The Go core reads them again.
+const TIME_LIMIT = /^(\/\S*|tag:\s*\S[^=]*|(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)\s+\/\S*)=\d+$/i
+
 export function parsePathLimits(text: string): { lines: string[]; bad: string[] } {
   const lines: string[] = []
   const bad: string[] = []
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim()
     if (!line) continue
-    if (/^\/\S*=\d+$/.test(line)) lines.push(line)
+    if (TIME_LIMIT.test(line)) lines.push(line)
     else bad.push(line)
   }
   return { lines, bad }

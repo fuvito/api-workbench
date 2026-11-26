@@ -848,7 +848,7 @@ needs and the ones nothing provides, and exits 0 once the spec has been read.`,
 	cmd.Flags().StringVarP(&outputFile, "output", "o", "", "Write report to file (parent directories created automatically)")
 	cmd.Flags().IntVar(&requestTimeout, "request-timeout", application.DefaultConformRequestTimeoutMs, "Per-request timeout in milliseconds")
 	cmd.Flags().IntVar(&maxResponseTime, "max-response-time", 0, "Fail an operation whose response takes longer than this many milliseconds (the response is still compared with the spec; 0 = no limit)")
-	cmd.Flags().StringArrayVar(&timeLimits, "max-response-time-for", nil, "A different response-time limit for the operations under a path prefix: /prefix=ms, for example /reports=2000 (repeatable; the longest prefix wins; 0 turns the limit off there)")
+	cmd.Flags().StringArrayVar(&timeLimits, "max-response-time-for", nil, "A different response-time limit: /prefix=ms, tag:name=ms or \"GET /path=ms\" (repeatable; an operation rule wins over a path prefix, the longest prefix over tags, and the strictest tag holds; 0 turns the limit off)")
 	cmd.Flags().BoolVar(&failFast, "fail-fast", false, "Stop after the first violation or execution error")
 	cmd.Flags().BoolVar(&explain, "explain", false, "Explain each failure in plain language (what the spec expected, what the server sent, why it fails, how to fix it); JSON, HTML, Markdown and JUnit always include it")
 	cmd.Flags().StringVar(&changedAgainst, "changed-against", "", "Check only the operations that are new or changed compared with the spec at this git ref (for pull requests; needs git and a local spec file; a full run on main stays the safety net)")

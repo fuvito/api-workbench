@@ -559,6 +559,10 @@ describe('parsePathLimits', () => {
   it('reads /prefix=ms lines and names the ones that do not fit', () => {
     expect(parsePathLimits(['/reports=2000', '', ' /a/b=0 '].join('\n'))).toEqual({ lines: ['/reports=2000', '/a/b=0'], bad: [] })
     expect(parsePathLimits(['reports=1', '/x=abc'].join('\n')).bad).toEqual(['reports=1', '/x=abc'])
+    const rules = ['tag:user reports=800', 'GET /reports/{id}=5', 'delete /a=0']
+    expect(parsePathLimits(rules.join('\n'))).toEqual({ lines: rules, bad: [] })
+    const bad = ['tag:=1', 'FETCH /a=1', 'GET a=1']
+    expect(parsePathLimits(bad.join('\n')).bad).toEqual(bad)
   })
 })
 

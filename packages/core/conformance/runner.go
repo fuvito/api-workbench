@@ -227,9 +227,10 @@ type Options struct {
 	// MaxResponseTimeMs fails an operation whose response took longer than this many milliseconds.
 	// The response is kept and compared with the spec as usual. 0 = no limit.
 	MaxResponseTimeMs int
-	// PathLimits sets a response-time limit for the operations under a path prefix (the longest
-	// matching prefix wins over MaxResponseTimeMs). A limit of 0 under a prefix switches the limit
-	// off for those operations.
+	// PathLimits sets other response-time limits, keyed as ParsePathLimits reads them: a path prefix,
+	// "tag:<name>" or "<METHOD> <path>". For one operation the rule naming it wins, then the longest
+	// matching prefix, then the strictest of its tags' limits; each wins over MaxResponseTimeMs. A
+	// limit of 0 switches the limit off for what its rule matches.
 	PathLimits map[string]int
 	// ReadOnly runs only GET and HEAD operations; every other operation is reported as skipped
 	// and never sent.
@@ -340,7 +341,7 @@ func (r *Runner) Run(ctx context.Context, spec *openapi.Spec, baseURL string, en
 			or.BodySnippet = redact.Excerpt(resp.BodyString(), 200)
 		}
 		or.Violations = openapi.ValidateResponseByPath(spec, string(gr.Request.Method), or.Path, resp.StatusCode, resp)
-		if limit := opts.limitFor(or.SpecPath, or.Path); limit > 0 && resp.Duration.Milliseconds() > int64(limit) {
+		if limit := opts.limitFor(or.Method, or.Tags, or.SpecPath, or.Path); limit > 0 && resp.Duration.Milliseconds() > int64(limit) {
 			// The message holds the limit, not the measured time, so a baseline stays stable
 			// between runs; the time is in DurationMs and in the finding's Got.
 			or.Violations = append(or.Violations, openapi.ValidationError{
@@ -402,16 +403,55 @@ func matchesTags(opTags, filterTags []string) bool {
 	return false
 }
 
-// limitFor returns the response-time limit for an operation path: the longest matching
-// PathLimits prefix, otherwise MaxResponseTimeMs.
-func (o Options) limitFor(specPath, sentPath string) int {
+// tagRule starts a time limit that applies to the operations with a tag.
+const tagRule = "tag:"
+
+// limitFor returns the response-time limit of an operation (see Options.PathLimits).
+func (o Options) limitFor(method string, tags []string, specPath, sentPath string) int {
+	if ms, ok := o.operationLimit(method, specPath, sentPath); ok {
+		return ms
+	}
 	best, limit := "", o.MaxResponseTimeMs
 	for prefix, ms := range o.PathLimits {
-		if hasPathPrefix(prefix, specPath, sentPath) && (best == "" || longerPrefix(prefix, best)) {
+		if strings.HasPrefix(prefix, "/") && hasPathPrefix(prefix, specPath, sentPath) && (best == "" || longerPrefix(prefix, best)) {
 			best, limit = prefix, ms
 		}
 	}
-	return limit
+	if best != "" {
+		return limit
+	}
+	// among several tags the strictest limit holds; 0 (no limit) is the least strict
+	found, strictest := false, 0
+	for rule, ms := range o.PathLimits {
+		name, isTag := strings.CutPrefix(rule, tagRule)
+		if !isTag || !matchesTags(tags, []string{name}) {
+			continue
+		}
+		if !found || strictest == 0 || (ms > 0 && ms < strictest) {
+			found, strictest = true, ms
+		}
+	}
+	if found {
+		return strictest
+	}
+	return o.MaxResponseTimeMs
+}
+
+// operationLimit is the limit of a rule that names this operation. The whole path must match,
+// with parameters written either way.
+func (o Options) operationLimit(method, specPath, sentPath string) (int, bool) {
+	for _, path := range []string{sentPath, specPath} {
+		if ms, ok := o.PathLimits[strings.ToUpper(method)+" "+path]; ok {
+			return ms, true
+		}
+	}
+	for rule, ms := range o.PathLimits {
+		verb, path, ok := strings.Cut(rule, " ")
+		if ok && !strings.HasPrefix(rule, tagRule) && strings.EqualFold(verb, method) && SpecStyle(path) == specPath {
+			return ms, true
+		}
+	}
+	return 0, false
 }
 
 // longerPrefix orders the prefixes that match one operation: the one naming more of the path wins,
@@ -433,7 +473,8 @@ func hasPathPrefix(prefix, specPath, sentPath string) bool {
 	return strings.HasPrefix(specPath, prefix) || strings.HasPrefix(sentPath, prefix) || strings.HasPrefix(specPath, SpecStyle(prefix))
 }
 
-// ParsePathLimits reads repeated /prefix=ms values (for --max-response-time-for).
+// ParsePathLimits reads repeated --max-response-time-for values: /prefix=ms, tag:<name>=ms or
+// "<METHOD> /path=ms".
 func ParsePathLimits(values []string) (map[string]int, error) {
 	if len(values) == 0 {
 		return nil, nil
@@ -441,16 +482,38 @@ func ParsePathLimits(values []string) (map[string]int, error) {
 	out := map[string]int{}
 	for _, v := range values {
 		i := strings.LastIndex(v, "=")
-		if i <= 0 || !strings.HasPrefix(v, "/") {
-			return nil, fmt.Errorf("invalid time limit %q: use /path-prefix=milliseconds, for example /reports=2000", v)
+		rule, ok := "", false
+		if i > 0 {
+			rule, ok = timeLimitRule(v[:i])
+		}
+		if !ok {
+			return nil, fmt.Errorf("invalid time limit %q: use /path-prefix=milliseconds, tag:name=milliseconds or \"GET /path=milliseconds\", for example /reports=2000", v)
 		}
 		ms, err := strconv.Atoi(strings.TrimSpace(v[i+1:]))
 		if err != nil || ms < 0 {
 			return nil, fmt.Errorf("invalid time limit %q: the milliseconds must be a whole number, 0 or more", v)
 		}
-		out[strings.TrimSpace(v[:i])] = ms
+		out[rule] = ms
 	}
 	return out, nil
+}
+
+// timeLimitRule reads the part of a time limit before the "=", in the form limitFor looks up.
+func timeLimitRule(text string) (string, bool) {
+	text = strings.TrimSpace(text)
+	if strings.HasPrefix(text, "/") {
+		return text, true
+	}
+	if name, isTag := strings.CutPrefix(text, tagRule); isTag {
+		name = strings.TrimSpace(name)
+		return tagRule + name, name != ""
+	}
+	verb, path, ok := strings.Cut(text, " ")
+	verb, path = strings.ToUpper(verb), strings.TrimSpace(path)
+	if !ok || !domain.HTTPMethod(verb).IsValid() || !strings.HasPrefix(path, "/") {
+		return "", false
+	}
+	return verb + " " + path, true
 }
 
 func matchesPathPrefix(specPath, sentPath string, prefixes []string) bool {

@@ -1139,3 +1139,9 @@ User-facing release notes are in the About dialog (`AboutDialog.tsx`) and on the
 - **Can turn a passing run into a failing one:** an unknown key anywhere in these files; a `uri` or `hostname` value that does not fit (a relative link declared `uri` is the likely case); with `--fail-on warning`, doubtful probes. **Forward compatibility:** a file with a key added by a later release is refused by this one, as bundles and `clrsig.yaml` already do.
 - **Not done:** the app does not keep `x-` keys on save (B-153). The new formats were tried only on the specs of this repository and the sandbox.
 
+### 2026-11-26 — B-082: response-time limits for a tag or one operation
+
+- `--max-response-time-for` (and `conform.maxResponseTimeFor`, the app and the MCP tool, which share the parser) also takes `tag:name=ms` and `"METHOD /path=ms"`. Precedence: operation, then the longest path prefix, then the strictest matching tag, then the general limit; 0 turns a limit off and is the least strict among tags. Existing `/prefix=ms` rules behave as before.
+- A release up to 0.14.1 refuses a project file with one of the new rules.
+- **Guards:** `packages/core/conformance/time_limit_rules_test.go`. **Not done:** nothing warns about a rule that matches no operation (as before for prefixes).
+

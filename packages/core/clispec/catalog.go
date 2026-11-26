@@ -285,8 +285,8 @@ var catalog = []Command{
 			},
 			{
 				Name: "max-response-time-for", Kind: KindString, Repeatable: true,
-				Label:   "Response-time limit for a path (ms)",
-				Help:    "/prefix=ms, repeatable: a different limit for the operations under a path prefix. The longest matching prefix wins over the general limit; 0 turns the limit off there.",
+				Label:   "Response-time limit for some operations (ms)",
+				Help:    "/prefix=ms, tag:name=ms or \"GET /path=ms\", repeatable: a different limit. An operation rule wins over a path prefix, the longest prefix over tags, and the strictest tag holds; 0 turns the limit off.",
 				Example: "/reports=2000",
 				Group:   GroupAdvanced, Deferred: true,
 			},

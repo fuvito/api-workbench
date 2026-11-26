@@ -520,7 +520,7 @@ conform:
   failOn: failure                     # --fail-on: failure | warning
   requestTimeoutMs: 10000             # --request-timeout
   maxResponseTimeMs: 0                # --max-response-time
-  maxResponseTimeFor: ["/reports=2000"]   # --max-response-time-for
+  maxResponseTimeFor: ["/reports=2000", "tag:search=800", "GET /export=0"]   # --max-response-time-for: /prefix=ms, tag:name=ms or "METHOD /path=ms"
   tags: [users]                       # --tags
   paths: [/users]                     # --paths
   baseline: conform-baseline.yaml     # --baseline

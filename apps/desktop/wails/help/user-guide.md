@@ -837,7 +837,7 @@ clrsig conform openapi.yaml --base-url http://localhost:8080 --negative --format
 | `--fail-fast` | Stop after the first violation or execution error. |
 | `--request-timeout` | Per-request timeout in milliseconds (default `10000`). |
 | `--max-response-time` | Fail an operation whose response takes longer than this many milliseconds (default: no limit). The response is still compared with the spec, so a slow response with a wrong body reports both. Limits are wall-clock: leave a margin. |
-| `--max-response-time-for` | A different limit for the operations under a path prefix, as `/prefix=ms` (repeatable), for example `--max-response-time-for /reports=2000`. The longest matching prefix wins over `--max-response-time`; `0` turns the limit off there. |
+| `--max-response-time-for` | A different limit for some operations, repeatable: `/prefix=ms` for the paths under a prefix, `tag:name=ms` for the operations with a tag, or `"GET /reports/{id}=ms"` for one operation (the whole path). If several match, the operation rule wins, then the longest path prefix, then the strictest of the matching tags. Each wins over `--max-response-time`; `0` turns the limit off. A rule that matches no operation changes nothing, so check its spelling with `--list`. |
 | `--format`, `-f` / `--output`, `-o` | `text`, `json`, `junit`, `html` or `markdown`; write the report to a file. |
 | `--report` | `format=file`, repeatable: also write a report in another format from the same run. |
 | `--var` | `name=value`, repeatable: set or override an environment variable for this run. |
