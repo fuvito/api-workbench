@@ -1109,3 +1109,10 @@ User-facing release notes are in the About dialog (`AboutDialog.tsx`) and on the
 - A request that was not sent is not added to history.
 - **Guards:** `apps/desktop/wails/undefined_value_test.go` replaces the test that pinned the gap (CS-RUN-023).
 
+### 2026-11-25 — Released 0.14.0
+
+- Tagged `def4dfb` after all CI jobs passed on it. The sandbox had passed in GitHub Actions against `a0577bb`; no Go file changed after it.
+- All release jobs and all five post-release smoke jobs passed. The notes begin with what now stops and with the coverage migration. The four checksum files match; Homebrew and Scoop carry the published hashes.
+- With the downloaded Windows binary, 11 behaviour checks matched the notes. **The coverage migration check failed (B-152):** the test happened to have a spec beside the workspace at the path a scenario writes, and the old entry was renamed to that file. With that file removed, the same checks all passed, the migration of data recorded by 0.13.5 included. The migration tests and the earlier trial had no such file.
+- **Not done:** the sandbox still pins 0.13.5; the website still offers 0.13.5.
+
