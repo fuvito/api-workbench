@@ -1197,3 +1197,10 @@ Reorganised only; no behaviour change intended. One commit per file.
 - **Guards added:** `app-behaviour.spec.ts` (URL and cURL paste, shortcuts, sidebar resize), which no test covered; it passes on the old and the new `App.tsx`.
 - **Not done:** `App.tsx`'s layout was not split into components. Nothing was tried by hand in the desktop app.
 
+### 2026-11-26 — Released 0.15.0
+
+- Tagged `b63a84d` after CI passed on it and the sandbox passed in GitHub Actions against that commit.
+- The sandbox's one change: `gap-format-uri` is now caught (`format: uri`). Its `main` pins v0.15.0; CI and the Action smoke test passed there.
+- All release and post-release smoke jobs passed; 13 files; the four checksum files match; Homebrew and Scoop carry the published hashes; the downloaded Windows binary reports v0.15.0. The release page starts with the upgrade notes.
+- Website: committed locally (`14ed5cf`), with all 59 Learn cards giving the same output; not pushed or deployed at the time of writing.
+- **Not done:** the sandbox has no expectations yet for unknown keys, doubtful probes or the new response-time rules. The desktop app was not tried by hand.

@@ -186,6 +186,7 @@ The one living list of work that is not done yet. It is edited in place: tick an
 | ☑ | B-153 | **The app does not keep `x-` keys when it saves a request, scenario or environment file.** `CLAUDE.md` section 8 asks to preserve extension fields where possible. **Done 2026-11-26** (not yet released): [design](../enhancements/2026-11-26-keep-extension-keys.md). Bundles still do not carry them. | M | None | Found building B-121, 2026-11-26 |
 | ☑ | B-154 | **The demo servers’ workspaces include a `clrsig.yaml`.** **Done 2026-11-26** (not yet released). | S | None | Owner request, 2026-11-26 |
 | ☑ | B-155 | **Saving from the visual scenario editor dropped fields it does not show:** an assertion’s `name`, a step request’s `title` and `timeout`, and a list or object under `expected` was written as plain text. **Done 2026-11-26** with B-153 (not yet released; CS-RUN-025). | S | None | Found designing B-153, 2026-11-26 |
+| ☐ | B-156 | **A deliberately slow endpoint in the demo servers**, answering normally after a couple of seconds (well inside the timeout), so the waiting state can be seen in the desktop app. Check the Demo Server and the Conformance Server, their specs, sample requests or scenarios, and that coverage or conformance expectations still hold. **For the release after 0.15.0.** | S | None | Owner, 2026-11-26 |
 
 ## Done
 
