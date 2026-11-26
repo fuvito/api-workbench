@@ -87,6 +87,9 @@ func WriteRequest(req *domain.Request, format string) ([]byte, error) {
 }
 
 func requestFileToDomain(rf *RequestFile) (*domain.Request, error) {
+	if err := checkSchemaVersion(rf.SchemaVersion); err != nil {
+		return nil, err
+	}
 	if rf.Method == "" {
 		return nil, errors.New("method is required")
 	}

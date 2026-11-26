@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/fuvito/api-workbench/packages/core/coverage"
 	"github.com/fuvito/api-workbench/packages/core/workspaceinfo"
 )
 
@@ -120,17 +122,21 @@ func (d *DashboardService) GetWorkspaceOverview() WorkspaceOverviewIO {
 	out.Attention = rep.Attention
 	out.ProjectFile = rep.ProjectFile
 
-	// Look coverage up by the store's own key, as the store does: spellings that differ only in
-	// punctuation (../specs/a.yaml and ../../specs/a.yaml) share one stored entry and one card.
+	// Look coverage up as the store does, by which spec is meant: ../specs/a.yaml and
+	// ../../specs/a.yaml written for one file are one stored entry and one card.
 	stored := map[string]AccumulatedCoverageIO{}
 	for _, c := range d.scenario.ListAccumulatedCoverage() {
-		stored[coverageKey(c.SpecFile)] = c
+		stored[c.SpecFile] = c
 	}
 	for _, sp := range rep.Specs {
 		item := DashSpecIO{Ref: sp.Ref, Refs: sp.Refs, Path: sp.Path, State: sp.State, Scenarios: sp.Scenarios, Coverage: []DashCoverageIO{}}
 		seen := map[string]bool{}
 		for _, ref := range sp.Refs {
-			key := coverageKey(ref)
+			// sp.Path is the file the scenarios mean, when it was found
+			key := coverage.Identify(root, ref)
+			if sp.State == workspaceinfo.SpecFound || (sp.State == workspaceinfo.SpecOutside && fileExists(sp.Path)) {
+				key = coverage.Identify(root, sp.Path)
+			}
 			c, ok := stored[key]
 			if !ok || seen[key] {
 				continue
@@ -189,4 +195,9 @@ func (d *DashboardService) lastRun() *DashLastRunIO {
 		}
 	}
 	return last
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }

@@ -5,7 +5,7 @@ import {
   createFolder, deleteFolder, renameFolder, renameRequest, moveRequest,
   listEnvironments, selectEnvironment, getActiveEnvironment, getEnvironment,
   importOpenAPISpec, importOpenAPISpecFromURL,
-  importPostmanCollection, importInsomniaExport,
+  importPostmanCollection, importInsomniaExport, type CollectionImportResult,
   getHistory, clearHistory, listScenarios,
   getRecentWorkspaces, openWorkspaceByPath,
 } from '@/lib/bridge'
@@ -40,6 +40,7 @@ export function useWorkspace(deps: {
   const [envVarMap, setEnvVarMap] = useState<Record<string, string>>({})
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState('')
+  const [importReport, setImportReport] = useState<CollectionImportResult | null>(null)
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [scenarioList, setScenarioList] = useState<ScenarioInfo[]>([])
   const [recentWorkspaces, setRecentWorkspaces] = useState<string[]>([])
@@ -418,11 +419,19 @@ export function useWorkspace(deps: {
     }
   }
 
+  /** An import that converted everything needs no dialog: the new files say it. */
+  function reportImport(result: CollectionImportResult) {
+    if (result.warnings?.length || result.skipped > 0) setImportReport(result)
+  }
+
   async function handleImportPostman() {
     setImporting(true)
     try {
       const result = await importPostmanCollection()
-      if (!result.error) await refreshFileTree()
+      if (!result.error) {
+        reportImport(result)
+        await refreshFileTree()
+      }
     } catch (err) {
       console.error('postman import failed:', err)
     } finally {
@@ -434,7 +443,10 @@ export function useWorkspace(deps: {
     setImporting(true)
     try {
       const result = await importInsomniaExport()
-      if (!result.error) await refreshFileTree()
+      if (!result.error) {
+        reportImport(result)
+        await refreshFileTree()
+      }
     } catch (err) {
       console.error('insomnia import failed:', err)
     } finally {
@@ -457,6 +469,7 @@ export function useWorkspace(deps: {
     deletingFolderPath, setDeletingFolderPath, confirmDeleteFolder,
     handleRenameFile, handleRenameFolder,
     handleImportOpenAPI, handleImportPostman, handleImportInsomnia,
+    importReport, setImportReport,
     importFromURLDialog, setImportFromURLDialog,
     importFromURLInput, setImportFromURLInput,
     importFromURLError, setImportFromURLError,

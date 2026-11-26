@@ -15,7 +15,7 @@ A **bundle** is one file that holds environments, requests and scenarios. Use it
 
 > **Treat a bundle you did not write like a script you did not write.** `bundle run` sends whatever it says, to whatever address it names, including `DELETE`. Read it first.
 
-> **After an export, give the secrets.** `export` replaces secret values with the text `CHANGE_ME`. `bundle run` treats a secret that still holds it as **having no value**: it names it in a warning, and a step that uses it is not sent. Give the real value with `--env-file` or `--var`. This protects `bundle run` only: after `bundle import`, the environment files still hold `CHANGE_ME`, and `run`, `conform` and the app **send it** (backlog B-149). Releases up to 0.13.5 sent it from `bundle run` too.
+> **After an export, give the secrets.** `export` replaces secret values with the text `CHANGE_ME`. `bundle run` treats a secret that still holds it as **having no value**: it names it in a warning, and a step that uses it is not sent. Give the real value with `--env-file` or `--var`. The same applies after `bundle import`: `run`, `conform`, `request` and the app do not send it either. Releases up to 0.13.5 sent it.
 
 The bundle format is in the [format spec](../../../apps/desktop/wails/help/format-spec.md).
 

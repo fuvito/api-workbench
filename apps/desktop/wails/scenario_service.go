@@ -776,6 +776,11 @@ func (s *ScenarioService) RunFolder(folderPath string) []FolderRunItemIO {
 		resolver := variables.NewResolver(env)
 		resolved := resolver.InterpolateRequest(req)
 
+		if err := variables.MissingSecret(env, resolved); err != nil {
+			results = append(results, FolderRunItemIO{Name: name, Path: path, Method: string(req.Method), Error: err.Error()})
+			continue
+		}
+
 		resp, execErr := exec.Execute(ctx, resolved)
 		if ctx.Err() != nil {
 			break // cancelled while this request was in flight: it is not a result
@@ -995,7 +1000,7 @@ func (s *ScenarioService) RunScenario(path, envPath string, fromStep int) Scenar
 
 			// Accumulate into the workspace coverage store.
 			if s.workspace.workspacePath != "" {
-				if acc, ok := accumulateCoverage(s.workspace.workspacePath, sc.SpecFile, loadedSpec, cr, result.Passed); ok {
+				if acc, ok := accumulateCoverage(s.workspace.workspacePath, sc.SpecFile, loadedSpec, cr, result.Passed, filepath.Dir(path)); ok {
 					out.AccumulatedCoverage = &acc
 				}
 			}

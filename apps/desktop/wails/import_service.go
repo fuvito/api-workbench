@@ -30,6 +30,8 @@ type CollectionImportResult struct {
 	Imported       []ImportedRequestIO `json:"imported"`
 	Skipped        int                 `json:"skipped"`
 	Error          string              `json:"error,omitempty"`
+	// Warnings says what could not be converted, one "request: what" line each.
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // ImportPostmanCollection opens a file picker, parses a Postman Collection v2.1 file,
@@ -94,6 +96,11 @@ func (s *ImportService) saveImportedRequests(collectionName string, requests []i
 
 	saved := importer.Save(filepath.Join(wsPath, "requests"), collectionName, requests, false)
 	result := CollectionImportResult{CollectionName: collectionName, Skipped: saved.Skipped}
+	for _, r := range requests {
+		for _, w := range r.Warnings {
+			result.Warnings = append(result.Warnings, r.Request.Title+": "+w)
+		}
+	}
 	for _, sv := range saved.Saved {
 		result.Imported = append(result.Imported, ImportedRequestIO{
 			OperationID: "",

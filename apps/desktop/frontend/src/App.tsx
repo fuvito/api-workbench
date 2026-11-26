@@ -30,6 +30,7 @@ import {CliBuilderTab} from '@/components/CliBuilderTab'
 import type {CliBuilderPreset} from '@/components/CliBuilderTab'
 import {WorkspaceImportDialog} from '@/components/WorkspaceImportDialog'
 import {BundleImportDialog} from '@/components/BundleImportDialog'
+import {ImportReportDialog} from '@/components/ImportReportDialog'
 import {Sidebar} from '@/components/Sidebar'
 import {AboutDialog} from '@/components/AboutDialog'
 import {
@@ -1024,6 +1025,10 @@ export default function App() {
       )}
       {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
       {showHelp && <HelpPanel onClose={() => setShowHelp(false)} initialTab={helpInitialTab} />}
+      {workspace.importReport && (
+        <ImportReportDialog report={workspace.importReport} onClose={() => workspace.setImportReport(null)} />
+      )}
+
       {workspace.importFromURLDialog && (
         <ImportFromURLDialog
           value={workspace.importFromURLInput}

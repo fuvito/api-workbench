@@ -561,6 +561,26 @@ describe('imports', () => {
   it.each([
     ['handleImportPostman', () => b.importPostmanCollection],
     ['handleImportInsomnia', () => b.importInsomniaExport],
+  ] as const)('%s keeps a report only when something was not converted', async (name, mock) => {
+    primeRefresh()
+    const { result } = setup()
+    mock().mockResolvedValueOnce({ collectionName: 'c', imported: [], skipped: 0 } as never)
+    await act(async () => { await result.current.ws[name]() })
+    expect(result.current.ws.importReport).toBeNull()
+
+    mock().mockResolvedValueOnce({ collectionName: 'c', imported: [], skipped: 0, warnings: ['a: b'] } as never)
+    await act(async () => { await result.current.ws[name]() })
+    expect(result.current.ws.importReport?.warnings).toEqual(['a: b'])
+
+    act(() => result.current.ws.setImportReport(null))
+    mock().mockResolvedValueOnce({ collectionName: 'c', imported: [], skipped: 1 } as never)
+    await act(async () => { await result.current.ws[name]() })
+    expect(result.current.ws.importReport?.skipped).toBe(1)
+  })
+
+  it.each([
+    ['handleImportPostman', () => b.importPostmanCollection],
+    ['handleImportInsomnia', () => b.importInsomniaExport],
   ] as const)('%s refreshes only when the import succeeded', async (name, mock) => {
     primeRefresh()
     const { result } = setup()

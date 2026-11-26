@@ -1141,7 +1141,7 @@ Exit codes:
 				allOpStrs[i] = op.String()
 			}
 
-			stored := coverage.Load(workspacePath, specArg)
+			stored := coverage.Load(workspacePath, specArg, ".")
 			report := coverage.BuildReport(stored, allOpStrs)
 
 			if f := strings.ToLower(format); isContractsFormat(f) {
@@ -1305,11 +1305,11 @@ func coverageResetCmd() *cobra.Command {
 				return err
 			}
 			specRef := args[0]
-			if !coverage.Has(ws, specRef) {
+			if !coverage.Has(ws, specRef, ".") {
 				fmt.Fprintf(cmd.OutOrStdout(), "No coverage data for %s in %s: nothing was reset.\n", specRef, ws)
 				return nil
 			}
-			if err := coverage.Reset(ws, specRef); err != nil {
+			if err := coverage.Reset(ws, specRef, "."); err != nil {
 				return fmt.Errorf("resetting coverage: %w", err)
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Coverage reset for %s\n", specRef)

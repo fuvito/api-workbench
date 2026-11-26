@@ -38,6 +38,9 @@ func ParseEnvironment(data []byte, format string) (*domain.Environment, error) {
 	default:
 		return nil, fmt.Errorf("unknown format %q; expected yaml or json", format)
 	}
+	if err := checkSchemaVersion(ef.SchemaVersion); err != nil {
+		return nil, err
+	}
 	return envFileToDomain(&ef), nil
 }
 

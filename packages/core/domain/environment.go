@@ -23,6 +23,16 @@ func NewEnvironment(name string) *Environment {
 	}
 }
 
+// SecretPlaceholder is what bundle export writes in place of a secret value.
+const SecretPlaceholder = "CHANGE_ME"
+
+// IsPlaceholder reports a secret that still holds SecretPlaceholder. It stands for a value that was
+// left out, so everything that fills in values treats the variable as not there: sending the text
+// as the secret would be wrong.
+func (v EnvironmentVariable) IsPlaceholder() bool {
+	return v.Secret && v.Value == SecretPlaceholder
+}
+
 // Lookup returns the value for the given variable name and whether it was found.
 func (e *Environment) Lookup(name string) (string, bool) {
 	for _, v := range e.Variables {

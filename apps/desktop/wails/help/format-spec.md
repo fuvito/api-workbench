@@ -479,6 +479,7 @@ scenarios:                         # optional — one or more
 - `file` is the path under its folder without the extension, for example `auth/login`. Scenario `requestRef`s that point at an exported request are rewritten to that name, so the bundle imports cleanly into another workspace.
 - If every scenario uses the same `specFile`, it is written once at the top of the bundle.
 - **Secret values are replaced with `CHANGE_ME`** so the file is safe to share or paste into a chat. The workspace itself is never changed.
+- **A variable that is `secret: true` and whose value is exactly `CHANGE_ME` has no value.** Nothing fills it in, in `clrsig` or in the app: a request that uses it is not sent, and you are told its name. Give it the real value, or a `${NAME}` reference. A variable that is not marked secret keeps the text `CHANGE_ME` as its value.
 
 ---
 
@@ -555,4 +556,4 @@ Place requests under `requests/`, scenarios under `scenarios/`, environments und
 
 ## Schema Version
 
-All files carry `schemaVersion: "1"` (a quoted string). This field is required and enables future format migration. Always use the value `"1"` for the current format.
+Request, scenario, environment and bundle files carry `schemaVersion: "1"` (a quoted string; some other files have their own version, as their sections say). Always write it. A **different value is refused** (`schemaVersion "9" is not supported`), because reading such a file as version 1 would ignore whatever is new in it. A request, scenario or environment file with **no** `schemaVersion` is still read, as it always has been. Releases up to 0.13.5 accepted any value in these three.

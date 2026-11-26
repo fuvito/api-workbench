@@ -93,6 +93,9 @@ func WriteScenario(s *domain.Scenario, format string) ([]byte, error) {
 }
 
 func scenarioFileToDomain(sf *ScenarioFile) (*domain.Scenario, error) {
+	if err := checkSchemaVersion(sf.SchemaVersion); err != nil {
+		return nil, err
+	}
 	s := &domain.Scenario{
 		SchemaVersion: sf.SchemaVersion,
 		Title:         sf.Title,

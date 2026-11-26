@@ -71,6 +71,25 @@ func MissingEnv(env *domain.Environment) []EnvRef {
 	return out
 }
 
+// Placeholders names the secrets that still hold the placeholder of a bundle export.
+func Placeholders(env *domain.Environment) []string {
+	if env == nil {
+		return nil
+	}
+	var out []string
+	for _, v := range env.Variables {
+		if v.IsPlaceholder() {
+			out = append(out, v.Name)
+		}
+	}
+	return out
+}
+
+// PlaceholderMessage is the sentence the CLI and the desktop show for such a secret.
+func PlaceholderMessage(name string) string {
+	return fmt.Sprintf("%q still holds the %s that bundle export wrote in place of a secret, so it has no value", name, domain.SecretPlaceholder)
+}
+
 // SecretValues returns the resolved values of the variables marked secret, so reports can
 // keep them out of their output.
 func SecretValues(env *domain.Environment) []string {
@@ -79,7 +98,7 @@ func SecretValues(env *domain.Environment) []string {
 	}
 	var out []string
 	for _, v := range env.Variables {
-		if !v.Secret {
+		if !v.Secret || v.IsPlaceholder() {
 			continue
 		}
 		if val := strings.TrimSpace(ExpandEnv(v.Value)); val != "" {
@@ -99,10 +118,13 @@ func ResolveEnvironment(env *domain.Environment, eng *Engine) (*domain.Environme
 	}
 	r := NewResolverWith(env, eng)
 	out := *env
-	out.Variables = make([]domain.EnvironmentVariable, len(env.Variables))
-	for i, v := range env.Variables {
+	out.Variables = make([]domain.EnvironmentVariable, 0, len(env.Variables))
+	for _, v := range env.Variables {
+		if v.IsPlaceholder() {
+			continue
+		}
 		val, _ := r.Get(v.Name)
-		out.Variables[i] = domain.EnvironmentVariable{Name: v.Name, Value: val, Secret: v.Secret}
+		out.Variables = append(out.Variables, domain.EnvironmentVariable{Name: v.Name, Value: val, Secret: v.Secret})
 	}
 	return &out, r.TakeErrors()
 }

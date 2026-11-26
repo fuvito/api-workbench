@@ -283,7 +283,7 @@ The result is ordinary request, scenario and environment files under `requests/`
 **File → Export → Bundle (environments + requests + scenarios)…** saves everything in the open workspace as one bundle file — handy for sharing a test suite, moving it to another workspace, or giving an AI assistant your existing tests as context.
 
 - Choose where to save it. A confirmation lists how many environments, requests and scenarios were written.
-- **Values marked secret are replaced with `CHANGE_ME`.** A credential written directly in a request or scenario is not, so read the file before sharing it. The workspace is not changed, and the message tells you how many values were replaced. After importing such a bundle, put the real values in the environment files: until then, `CHANGE_ME` is what gets sent (`clrsig bundle run` alone refuses to send it).
+- **Values marked secret are replaced with `CHANGE_ME`.** A credential written directly in a request or scenario is not, so read the file before sharing it. The workspace is not changed, and the message tells you how many values were replaced. After importing such a bundle, put the real values in the environment files: until then those secrets have no value, and a request that uses one is not sent.
 - Files that cannot be read (for example a request with a YAML error) are skipped and listed in the message.
 - Import the file in another workspace with **File → Import → Bundle…**; scenarios keep working with the requests they refer to.
 
@@ -521,6 +521,8 @@ Click the **Contracts** icon (bar chart) in the Activity Rail to open the sideba
 - Total runs, passed runs, and failed runs
 
 Click a spec card to view its full detail in the main area.
+
+A spec file is one card however its path was written, named by its path from the workspace root. A spec given as a web address has a card of its own, apart from a file of the same name, and each card says which it is.
 
 ### The Contracts tab (main area)
 
@@ -920,7 +922,7 @@ clrsig import postman collection.json --output requests/
 clrsig import insomnia export.json --output requests/ --dry-run
 ```
 
-Converts a Postman collection (v2.1) or an Insomnia export (v4) into request files, in the same layout the desktop app's **Import** menu uses: `<output>/<collection>/<folders>/<request>.yaml` (default output folder: `requests`). Scripts are not converted: `clrsig import` warns for each request that had a Postman test or pre-request script (the desktop import does not show warnings). It never overwrites: a name that is taken gets `-2`, `-3` … `--dry-run` lists the files that would be written. `--format json` gives the list for scripts. Exit codes: `0` converted, `1` some requests could not be written, `2` the file is unreadable or not a supported export.
+Converts a Postman collection (v2.1) or an Insomnia export (v4) into request files, in the same layout the desktop app's **Import** menu uses: `<output>/<collection>/<folders>/<request>.yaml` (default output folder: `requests`). Scripts are not converted: `clrsig import` and the desktop import warn for each request that had a Postman test or pre-request script. It never overwrites: a name that is taken gets `-2`, `-3` … `--dry-run` lists the files that would be written. `--format json` gives the list for scripts. Exit codes: `0` converted, `1` some requests could not be written, `2` the file is unreadable or not a supported export.
 
 ### `clrsig coverage`
 

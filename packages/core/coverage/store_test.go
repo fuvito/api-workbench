@@ -11,12 +11,21 @@ import (
 
 func TestKey(t *testing.T) {
 	got := Key("https://API.example.com/v1/openapi.yaml")
-	if got != "https_api_example_com_v1_openapi_yaml.json" {
+	if !strings.HasPrefix(got, "https_api_example_com_v1_openapi_yaml-") || !strings.HasSuffix(got, ".json") {
 		t.Fatalf("unexpected key %q", got)
 	}
-	long := Key(strings.Repeat("a", 200))
-	if len(long) != 80+len(".json") {
-		t.Fatalf("long key not truncated: %d", len(long))
+	// readable, not too long, and every name its own
+	long := strings.Repeat("a", 200)
+	if len(Key(long)) > 60+1+12+len(".json") {
+		t.Fatalf("long key not truncated: %d", len(Key(long)))
+	}
+	for _, pair := range [][2]string{
+		{"specs/a.yaml", "specs/a_yaml"}, {"specs/A.yaml", "specs/a.yaml"},
+		{"x/" + long, "y/" + long}, {"https://h/a?v=1", "https://h/a/v/1"},
+	} {
+		if Key(pair[0]) == Key(pair[1]) {
+			t.Errorf("%q and %q share a key", pair[0], pair[1])
+		}
 	}
 }
 

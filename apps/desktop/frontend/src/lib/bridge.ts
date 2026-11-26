@@ -470,6 +470,8 @@ export interface CollectionImportResult {
   imported: ImportedRequest[]
   skipped: number
   error?: string
+  /** What could not be converted, one "request: what" line each. */
+  warnings?: string[]
 }
 
 export async function importPostmanCollection(): Promise<CollectionImportResult> {

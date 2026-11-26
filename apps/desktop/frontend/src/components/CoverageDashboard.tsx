@@ -8,6 +8,10 @@ type Props = {
   workspacePath: string
 }
 
+function specSource(specFile: string): string {
+  return `${specFile.includes('://') ? 'Web address' : 'File'}: ${specFile}`
+}
+
 function specLabel(specFile: string): string {
   const parts = specFile.replace(/\\/g, '/').split('/')
   return parts[parts.length - 1] || specFile
@@ -145,6 +149,12 @@ export function CoverageDashboard({ workspacePath }: Props) {
                   </div>
 
                   <div className="ml-4">
+                    {/* two cards can share a file name: a file and a web address, or two folders */}
+                    {specLabel(entry.specFile) !== entry.specFile && (
+                      <div className="text-[10px] text-[var(--color-muted-foreground)] truncate mb-1" title={entry.specFile} data-testid="spec-source">
+                        {specSource(entry.specFile)}
+                      </div>
+                    )}
                     <div className="h-1.5 rounded-full bg-[var(--color-muted)] overflow-hidden mb-1.5">
                       <div
                         className={cn('h-full rounded-full transition-all', barColor)}

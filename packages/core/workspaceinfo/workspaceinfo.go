@@ -27,14 +27,15 @@ const (
 
 // Kinds of attention item (stable identifiers, used by the page and by tests).
 const (
-	ItemNoEnvironment   = "no-environment"
-	ItemUndefinedValue  = "undefined-placeholder"
-	ItemUnsetEnvVar     = "unset-env-var"
-	ItemSpecMissing     = "spec-missing"
-	ItemSpecOutside     = "spec-outside"
-	ItemScenarioInvalid = "scenario-invalid"
-	ItemRequestRef      = "request-ref-missing"
-	ItemScenarioWeak    = "scenario-weak"
+	ItemNoEnvironment     = "no-environment"
+	ItemUndefinedValue    = "undefined-placeholder"
+	ItemUnsetEnvVar       = "unset-env-var"
+	ItemPlaceholderSecret = "placeholder-secret"
+	ItemSpecMissing       = "spec-missing"
+	ItemSpecOutside       = "spec-outside"
+	ItemScenarioInvalid   = "scenario-invalid"
+	ItemRequestRef        = "request-ref-missing"
+	ItemScenarioWeak      = "scenario-weak"
 
 	ItemProjectFileInvalid = "project-file-invalid"
 	ItemProjectFilePath    = "project-file-path"
@@ -127,6 +128,16 @@ func Inspect(root string, env *domain.Environment, envPath string) Report {
 		r.EnvironmentName = env.Name
 		r.EnvironmentPath = envPath
 		r.EnvVars = describeEnv(env)
+		for _, name := range variables.Placeholders(env) {
+			r.Attention = append(r.Attention, Attention{
+				ID: ItemPlaceholderSecret, Severity: SeverityWarning,
+				What:   fmt.Sprintf("The secret %q has no value yet.", name),
+				Where:  fmt.Sprintf("environment %q", envLabel(env, envPath)),
+				Why:    fmt.Sprintf("It still holds the %s that a bundle export wrote in place of the secret, so requests that use it are not sent.", domain.SecretPlaceholder),
+				Fix:    fmt.Sprintf("Give %q its real value in the environment, or a ${NAME} reference to it.", name),
+				Target: Target{Kind: "environment", Path: envPath},
+			})
+		}
 		for _, ref := range variables.MissingEnv(env) {
 			r.Attention = append(r.Attention, Attention{
 				ID: ItemUnsetEnvVar, Severity: SeverityWarning,
@@ -197,6 +208,7 @@ func Inspect(root string, env *domain.Environment, envPath string) Report {
 	case env != nil:
 		have := map[string]bool{}
 		for _, v := range env.Variables {
+			// a placeholder has its own item above; "does not define" would say it twice
 			have[v.Name] = true
 		}
 		var missing []string
@@ -408,7 +420,7 @@ func describeEnv(env *domain.Environment) []EnvVar {
 	}
 	out := make([]EnvVar, 0, len(env.Variables))
 	for _, v := range env.Variables {
-		ev := EnvVar{Name: v.Name, Secret: v.Secret, Set: strings.TrimSpace(v.Value) != ""}
+		ev := EnvVar{Name: v.Name, Secret: v.Secret, Set: strings.TrimSpace(v.Value) != "" && !v.IsPlaceholder()}
 		if name, bad := unset[v.Name]; bad {
 			ev.Set, ev.UnsetRef = false, name
 		}

@@ -52,9 +52,9 @@ clrsig conform examples/server/openapi.yaml --base-url http://localhost:1 --env 
 | `unknown flag: …` | The option does not exist for this command. | `clrsig <command> --help`. Check your version: `clrsig --version`. |
 | `needs a scenario file or folder` | No file was given, and the project file names none. | Give one, or set `run.scenarios` in `clrsig.yaml`. |
 | `reading scenario: open …` | The path is wrong from the folder you are in. | Paths on the command line start at the current folder. |
-| `schemaVersion "…" is not supported` | A newer or mistaken file version. | Upgrade `clrsig`, or correct the file. (Scenario, request and environment files are **not** checked for this yet: backlog B-150.) |
+| `schemaVersion "…" is not supported` | The file says a version this `clrsig` does not know. | Upgrade `clrsig`, or correct the file: request, scenario and environment files take `"1"`. |
 | `the bundle has several environments` | `bundle run` cannot choose. | Add `--env <name>`. |
-| `still holds the CHANGE_ME` | An exported bundle has no value for that secret. | Give it with `--var` or `--env-file`. |
+| `still holds the CHANGE_ME` | A secret from an exported bundle has no value yet. | Put it in the environment file, or give it with `--var` or `--env-file`. |
 | `nothing was written: … already there` | `generate` will not replace edited files. | Use `--output` with a new folder; `--force` replaces them. |
 | `already exists and was not changed` | `init github-actions --write` will not replace a workflow. | Choose another `--output`, or merge by hand. |
 | `set both the certificate file and the key file` | Mutual TLS needs both. | Give `--client-cert` **and** `--client-key`. |

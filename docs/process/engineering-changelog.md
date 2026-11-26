@@ -1092,3 +1092,14 @@ User-facing release notes are in the About dialog (`AboutDialog.tsx`) and on the
 - **Guards:** their marked examples run in `TestDetailedGuideExamples`; the documentation tests check links. The tables and the troubleshooting rows are prose that no test holds to the code, apart from the examples on those pages.
 - Found while writing: scenario and request files with an unsupported `schemaVersion` are accepted and sent (B-150, CS-GAP-027); recorded, not fixed.
 
+### 2026-11-25 — B-150, B-148, B-149, B-080, B-010
+
+- **B-150:** request, scenario and environment files with a `schemaVersion` other than `1` are refused. A missing one is still read, so that existing files keep working. Format spec updated.
+- **B-149:** a secret still holding `CHANGE_ME` has no value, decided in the core (resolver, resolved environment, masking, `validate --strict`, Workspace page). The bundle-only rule added earlier that day is gone. The request editor and Run folder refuse a request that uses one.
+- **B-148:** the app lists import warnings and unwritten requests in a dialog.
+- **B-080 (decision D6):** `coverage.Identify` names a spec by its file when it exists and by its text otherwise; the file name of an entry is a readable part and a hash. **Migration:** on first read an old entry is renamed when its spec is certain (a web address, or a path that means exactly one file); otherwise it is kept and still readable. An existing new entry is never replaced. **Changes you can see:** coverage names a spec file by its path from the workspace root, not as a scenario wrote it. **Risk:** a release up to 0.13.5 on the same workspace does not find renamed entries and starts new ones, so pin one version per cached workspace.
+- **B-010:** cards say whether the spec is a web address or a file, and a conformance run says when a web-address card of the same name is separate. They are not merged.
+- **Behaviour that can turn a pass into a failure:** files with another `schemaVersion`; environments still holding `CHANGE_ME`.
+- **Found:** the request editor sends other undefined values as text (B-151, CS-GAP-028).
+- The new dialog and card line have component tests; the owner looked at the screens and accepted them (2026-11-25).
+

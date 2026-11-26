@@ -69,44 +69,15 @@ type Report struct {
 	OperationResults map[string]OperationResult
 }
 
-// Key converts a specFile value (URL or path) into a safe, unique filename.
-func Key(specFile string) string {
-	var b strings.Builder
-	for _, r := range strings.ToLower(specFile) {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
-			b.WriteRune(r)
-		} else {
-			b.WriteByte('_')
-		}
-	}
-	s := b.String()
-	for strings.Contains(s, "__") {
-		s = strings.ReplaceAll(s, "__", "_")
-	}
-	s = strings.Trim(s, "_")
-	if len(s) > 80 {
-		s = s[len(s)-80:]
-	}
-	return s + ".json"
-}
-
 // DirPath returns the coverage directory for the given workspace.
 func DirPath(workspacePath string) string {
 	return filepath.Join(workspacePath, ".clrsig-coverage")
 }
 
-// Load reads the stored coverage for specFile from workspacePath.
-// Returns a zero-value StoredCoverage (with SpecFile set) if no data exists.
-func Load(workspacePath, specFile string) StoredCoverage {
-	path := filepath.Join(DirPath(workspacePath), Key(specFile))
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return StoredCoverage{SpecFile: specFile}
-	}
-	var cov StoredCoverage
-	if err := json.Unmarshal(data, &cov); err != nil {
-		return StoredCoverage{SpecFile: specFile}
-	}
+// Load reads the stored coverage of the spec ref names (see Identify for what bases are).
+// With no data it returns an empty entry that already carries the name to store it under.
+func Load(workspacePath, ref string, bases ...string) StoredCoverage {
+	_, cov, _ := find(workspacePath, ref, bases)
 	return cov
 }
 
@@ -115,15 +86,18 @@ func Save(workspacePath string, cov StoredCoverage) error {
 	if workspacePath == "" {
 		return nil
 	}
-	dir := DirPath(workspacePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	cov.SpecFile = Identify(workspacePath, cov.SpecFile)
+	return write(workspacePath, filepath.Join(DirPath(workspacePath), Key(cov.SpecFile)), cov)
+}
+
+func write(workspacePath, dst string, cov StoredCoverage) error {
+	if err := os.MkdirAll(DirPath(workspacePath), 0755); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(cov, "", "  ")
 	if err != nil {
 		return err
 	}
-	dst := filepath.Join(dir, Key(cov.SpecFile))
 	tmp := dst + ".tmp"
 	if err := os.WriteFile(tmp, data, 0644); err != nil {
 		return err
@@ -131,15 +105,18 @@ func Save(workspacePath string, cov StoredCoverage) error {
 	return os.Rename(tmp, dst)
 }
 
-// Has reports whether coverage data is stored for specFile in workspacePath.
-func Has(workspacePath, specFile string) bool {
-	_, err := os.Stat(filepath.Join(DirPath(workspacePath), Key(specFile)))
-	return err == nil
+// Has reports whether coverage data is stored for the spec ref names.
+func Has(workspacePath, ref string, bases ...string) bool {
+	_, _, ok := find(workspacePath, ref, bases)
+	return ok
 }
 
-// Reset deletes the stored coverage data for specFile in workspacePath.
-func Reset(workspacePath, specFile string) error {
-	path := filepath.Join(DirPath(workspacePath), Key(specFile))
+// Reset deletes the stored coverage of the spec ref names.
+func Reset(workspacePath, ref string, bases ...string) error {
+	path, _, ok := find(workspacePath, ref, bases)
+	if !ok {
+		return nil
+	}
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -235,6 +212,7 @@ func BuildReport(stored StoredCoverage, allOps []string) Report {
 // ListAll scans the coverage directory in workspacePath and returns all entries
 // as summary Reports, sorted by most recently run first.
 func ListAll(workspacePath string) []Report {
+	upgrade(workspacePath)
 	entries, err := os.ReadDir(DirPath(workspacePath))
 	if err != nil {
 		return nil

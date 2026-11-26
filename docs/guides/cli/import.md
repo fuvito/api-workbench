@@ -66,7 +66,7 @@ Nothing existing is overwritten: a taken name gets `-2`, `-3` and so on. **Runni
 
 ## Common mistakes and limits
 
-- Scripts (pre-request and test) are not run or converted. The **desktop app does not show these warnings** (backlog B-148); releases up to 0.13.5 gave none here either.
+- Scripts (pre-request and test) are not run or converted. The desktop app lists the same warnings after an import. Releases up to 0.13.5 gave none.
 - Secrets written **literally** in a collection are copied into the files. Replace them with `{{name}}` before you commit.
 
 ## Related commands and the desktop app

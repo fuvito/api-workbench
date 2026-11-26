@@ -23,6 +23,9 @@ func finishEnvironment(cmd *cobra.Command, env *domain.Environment, vars []strin
 		}
 		env = overridden
 	}
+	for _, name := range variables.Placeholders(env) {
+		fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s: put the real value in the environment file%s\n", variables.PlaceholderMessage(name), placeholderHelp(cmd, name))
+	}
 	for _, ref := range variables.MissingEnv(env) {
 		fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s\n", ref.Message())
 	}
@@ -73,4 +76,12 @@ func prepareDynamic(cmd *cobra.Command, env *domain.Environment, seedFlag int64)
 		return nil, nil, fmt.Errorf("environment: %s", strings.Join(msgs, "; "))
 	}
 	return eng, resolved, nil
+}
+
+// placeholderHelp names --var only on the commands that have it.
+func placeholderHelp(cmd *cobra.Command, name string) string {
+	if cmd.Flags().Lookup("var") == nil {
+		return ""
+	}
+	return fmt.Sprintf(", or give it with --var %s=...", name)
 }

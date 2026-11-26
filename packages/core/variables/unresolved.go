@@ -1,6 +1,7 @@
 package variables
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -8,6 +9,21 @@ import (
 )
 
 var placeholderRef = regexp.MustCompile(`\{\{\s*([^{}\s][^{}]*?)\s*\}\}`)
+
+// MissingSecret says why a request must not go out when it uses a secret that still holds the
+// placeholder of a bundle export; nil when it uses none.
+func MissingSecret(env *domain.Environment, req *domain.Request) error {
+	held := map[string]bool{}
+	for _, name := range Placeholders(env) {
+		held[name] = true
+	}
+	for _, name := range UnresolvedPlaceholders(req) {
+		if held[name] {
+			return fmt.Errorf("not sent: %s: put the real value in the environment", PlaceholderMessage(name))
+		}
+	}
+	return nil
+}
 
 // UnresolvedPlaceholders lists, in order and without repeats, the {{names}} still present in a
 // request after variables were filled in: the ones nothing in the environment or the overrides

@@ -188,6 +188,10 @@ func (s *RequestService) Execute(input RequestInput) ResponseOutput {
 		return out
 	}
 
+	if err := variables.MissingSecret(env, resolved); err != nil {
+		return sent(ResponseOutput{Error: err.Error()})
+	}
+
 	// Per-request cancellable context so CancelRequest() can abort in-flight calls.
 	// Store only the most recent cancel so the Cancel button in the UI works for the
 	// last-sent request; prior in-flight requests run to completion independently.

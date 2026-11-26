@@ -28,6 +28,9 @@ func Lint(sc *domain.Scenario, o LintOptions) []Issue {
 	}
 	if o.Env != nil {
 		for _, v := range o.Env.Variables {
+			if v.IsPlaceholder() {
+				continue
+			}
 			defined[v.Name] = true
 		}
 	}

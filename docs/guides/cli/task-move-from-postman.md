@@ -43,4 +43,4 @@ Send one request with [`clrsig request`](request.md) and your environment file. 
 | The body matches a schema | `type: schema` |
 | An answer is quick enough | `type: duration`, `operator: lt`, `expected` in milliseconds |
 
-If you have an OpenAPI spec, [check the API against it](task-check-an-api.md) too: that needs no hand-written tests. The desktop app imports the same files but does not show the warnings, so use the command line to see them.
+If you have an OpenAPI spec, [check the API against it](task-check-an-api.md) too: that needs no hand-written tests. The desktop app imports the same files and lists the same warnings.

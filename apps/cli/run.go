@@ -252,12 +252,14 @@ func loadRunEnvironment(envFile string) (*domain.Environment, error) {
 func executeScenario(cmd *cobra.Command, scenarioPath, seedKey string, s *domain.Scenario, env *domain.Environment, loader *specLoader, o runOptions) *scenarioRun {
 	// --spec overrides specFile: from the scenario. A --spec path is relative to the current
 	// directory; a specFile: inside the scenario is relative to the scenario file.
-	// specRef stays as written because it is also the key coverage is accumulated under.
+	// specRef stays as written; coverage works out which file it means from specBase.
 	specRef := s.SpecFile
 	loadSrc := s.SpecFile
+	specBase := filepath.Dir(scenarioPath)
 	if o.specFile != "" {
 		specRef = o.specFile
 		loadSrc = cwdSpecPath(o.specFile)
+		specBase = "."
 	}
 
 	loadedSpec := loader.load(loadSrc, filepath.Dir(scenarioPath))
@@ -297,13 +299,13 @@ func executeScenario(cmd *cobra.Command, scenarioPath, seedKey string, s *domain
 	}
 
 	if o.workspacePath != "" && loadedSpec != nil && cov != nil {
-		accumulateCoverage(cmd, o.workspacePath, specRef, result, cov)
+		accumulateCoverage(cmd, o.workspacePath, specRef, specBase, result, cov)
 	}
 	return &scenarioRun{path: scenarioPath, result: result, cov: cov, specRef: specRef}
 }
 
-func accumulateCoverage(cmd *cobra.Command, workspacePath, specRef string, result *scenario.Result, cov *openapi.ScenarioCoverageResult) {
-	stored := coverage.Load(workspacePath, specRef)
+func accumulateCoverage(cmd *cobra.Command, workspacePath, specRef, specBase string, result *scenario.Result, cov *openapi.ScenarioCoverageResult) {
+	stored := coverage.Load(workspacePath, specRef, specBase)
 	stored.TotalRuns++
 	stored.LastRunAt = time.Now()
 	if result.Passed {

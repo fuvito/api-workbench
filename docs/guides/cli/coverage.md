@@ -108,7 +108,7 @@ When nothing is stored for that spec, it says `nothing was reset` and exits 0. C
 ## Common mistakes and limits
 
 - Coverage says an operation was **reached**, not that it was tested well.
-- Specs whose names differ only in punctuation or case can share one stored entry (backlog B-080).
+- A spec **file** is stored by the file itself and shown by its path from the workspace root, however you wrote it. A **web address** is stored by its exact text, and is counted apart from a file. Releases up to 0.13.5 could mix two specs in one entry; their entries are renamed when first read, and one whose spec cannot be told keeps its old name. Do not go back to such a release on the same workspace: it starts a second entry.
 
 ## Related commands and the desktop app
 

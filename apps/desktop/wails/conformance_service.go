@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"github.com/fuvito/api-workbench/packages/core/application"
 	"github.com/fuvito/api-workbench/packages/core/checks"
 	"github.com/fuvito/api-workbench/packages/core/conformance"
+	"github.com/fuvito/api-workbench/packages/core/coverage"
 	"github.com/fuvito/api-workbench/packages/core/domain"
 	"github.com/fuvito/api-workbench/packages/core/openapi"
 	"github.com/fuvito/api-workbench/packages/core/projectconfig"
@@ -557,6 +559,9 @@ func (s *ConformanceService) RunConformance(in ConformRunInput) ConformRunOutput
 	res := conformOutputIO(out, baseURL, in.AllowWrites)
 	res.SetupNote = setupNote
 	res.Baseline = baselineIO(in.BaselinePath, out.Diff)
+	for _, name := range variables.Placeholders(env) {
+		res.Warnings = append(res.Warnings, variables.PlaceholderMessage(name))
+	}
 	for _, ref := range variables.MissingEnv(env) {
 		res.Warnings = append(res.Warnings, ref.Message())
 	}
@@ -570,8 +575,8 @@ func (s *ConformanceService) RunConformance(in ConformRunInput) ConformRunOutput
 }
 
 // recordCoverage adds an unfiltered run to the Contracts coverage store and says what it did. The
-// store is keyed by the specFile string a scenario writes, so a scenario that already names this
-// spec file decides the name (one Contracts card); otherwise the workspace-relative path is used.
+// store knows a spec file by the file itself, so a run of a scenario that names the same file adds
+// to the same Contracts card.
 func (s *ConformanceService) recordCoverage(in ConformRunInput, spec *openapi.Spec, baseURL string, out application.ConformOutput) string {
 	if len(in.Tags) > 0 || len(in.Paths) > 0 {
 		return "Not added to coverage: a run limited by tags or paths would skew the totals."
@@ -580,13 +585,7 @@ func (s *ConformanceService) recordCoverage(in ConformRunInput, spec *openapi.Sp
 	if ws == "" {
 		return "Not added to coverage: no workspace is open."
 	}
-	specName := scenarioSpecRef(ws, in.SpecPath)
-	if specName == "" {
-		specName = in.SpecPath
-		if rel, err := filepath.Rel(ws, in.SpecPath); err == nil && !outsideRel(rel) {
-			specName = filepath.ToSlash(rel)
-		}
-	}
+	specName := coverage.Identify(ws, in.SpecPath)
 	var executed []openapi.ExecutedRequest
 	for _, op := range out.Result.Operations {
 		if op.Skipped || op.StatusCode == 0 {
@@ -603,7 +602,23 @@ func (s *ConformanceService) recordCoverage(in ConformRunInput, spec *openapi.Sp
 	if _, ok := accumulateCoverage(ws, specName, spec, cr, !out.Failed); !ok {
 		return "Not added to coverage: the coverage store could not be written."
 	}
-	return "Added to coverage as " + specName + ". Operations that were skipped or got no response were not counted."
+	return "Added to coverage as " + specName + ". Operations that were skipped or got no response were not counted." + webAddressNote(ws, specName)
+}
+
+// webAddressNote says that a card for a web address with the same file name is another card: a file
+// and an address are counted apart, because nothing says they hold the same spec.
+func webAddressNote(ws, specName string) string {
+	var others []string
+	for _, r := range coverage.ListAll(ws) {
+		if strings.Contains(r.SpecFile, "://") && path.Base(r.SpecFile) == path.Base(specName) {
+			others = append(others, r.SpecFile)
+		}
+	}
+	if len(others) == 0 {
+		return ""
+	}
+	sort.Strings(others)
+	return " The card for " + strings.Join(others, " and for ") + " is separate: a file and a web address are counted apart."
 }
 
 // ExportConformReport renders the latest run with the same renderers as the CLI.
@@ -739,43 +754,9 @@ func conformOutputIO(out application.ConformOutput, baseURL string, writes bool)
 	return res
 }
 
-// scenarioSpecRef returns the specFile string of the first scenario in the workspace whose
-// (file path) specFile resolves to specPath, or "" when no scenario uses that file.
-func scenarioSpecRef(ws, specPath string) string {
-	target := filepath.Clean(specPath)
-	found := ""
-	_ = filepath.WalkDir(filepath.Join(ws, "scenarios"), func(path string, d fs.DirEntry, err error) error {
-		if err != nil || found != "" || d.IsDir() {
-			return nil
-		}
-		switch strings.ToLower(filepath.Ext(path)) {
-		case ".yaml", ".yml", ".json":
-		default:
-			return nil
-		}
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return nil
-		}
-		sc, err := serialization.ParseScenarioFile(data, filepath.Base(path))
-		if err != nil || sc.SpecFile == "" || strings.Contains(sc.SpecFile, "://") {
-			return nil
-		}
-		ref := sc.SpecFile
-		if !filepath.IsAbs(ref) {
-			ref = filepath.Join(filepath.Dir(path), ref)
-		}
-		if strings.EqualFold(filepath.Clean(ref), target) {
-			found = sc.SpecFile
-		}
-		return nil
-	})
-	return found
-}
-
-// loadWorkspaceSpec loads the spec a Contracts entry is keyed by. The key is the specFile string
-// exactly as the scenarios wrote it, and a relative one is relative to the scenario's own folder,
-// so it is tried from the folder of each scenario that names it, then from the workspace root.
+// loadWorkspaceSpec loads the spec of a Contracts entry, or of a scenario's specFile. An entry
+// names a file from the workspace root; a scenario's relative path starts at its own folder. So the
+// path is tried from the folder of each scenario that writes it, then from the workspace root.
 func loadWorkspaceSpec(ws, specRef string) (data []byte, format string, err error) {
 	if strings.Contains(specRef, "://") || filepath.IsAbs(specRef) {
 		return loadSpecBytes(specRef, "")

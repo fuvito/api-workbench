@@ -36,6 +36,9 @@ func NewResolverWith(env *domain.Environment, eng *Engine) *Resolver {
 	r := &Resolver{vars: make(map[string]string), eng: eng}
 	if env != nil {
 		for _, v := range env.Variables {
+			if v.IsPlaceholder() {
+				continue
+			}
 			r.vars[v.Name] = r.evaluate(ExpandEnv(v.Value))
 		}
 	}

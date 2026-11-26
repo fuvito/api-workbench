@@ -50,10 +50,9 @@ type AccumulatedCoverageIO struct {
 // mergeExercised are thin aliases kept here so scenario_service.go call sites
 // remain unchanged while the real logic lives in packages/core/coverage.
 
-func coverageKey(specFile string) string          { return coverage.Key(specFile) }
 func coverageDirPath(workspacePath string) string { return coverage.DirPath(workspacePath) }
-func loadStoredCoverage(wsPath, specFile string) coverage.StoredCoverage {
-	return coverage.Load(wsPath, specFile)
+func loadStoredCoverage(wsPath, specFile string, bases ...string) coverage.StoredCoverage {
+	return coverage.Load(wsPath, specFile, bases...)
 }
 func saveStoredCoverage(wsPath string, cov coverage.StoredCoverage) error {
 	return coverage.Save(wsPath, cov)
@@ -187,13 +186,13 @@ func reportToIO(r coverage.Report) AccumulatedCoverageIO {
 
 // accumulateCoverage merges one run's coverage into the workspace store for specFile and returns
 // the new accumulated view. Scenario runs and conformance runs share it, so the Contracts page
-// counts both the same way.
-func accumulateCoverage(wsPath, specFile string, spec *openapi.Spec, cr *openapi.ScenarioCoverageResult, runPassed bool) (AccumulatedCoverageIO, bool) {
+// counts both the same way. bases are the folders a relative specFile was written against.
+func accumulateCoverage(wsPath, specFile string, spec *openapi.Spec, cr *openapi.ScenarioCoverageResult, runPassed bool, bases ...string) (AccumulatedCoverageIO, bool) {
 	exercised := make([]string, 0, len(cr.Exercised))
 	for _, op := range cr.Exercised {
 		exercised = append(exercised, op.String())
 	}
-	stored := loadStoredCoverage(wsPath, specFile)
+	stored := loadStoredCoverage(wsPath, specFile, bases...)
 	stored.TotalRuns++
 	stored.LastRunAt = time.Now()
 	if runPassed {

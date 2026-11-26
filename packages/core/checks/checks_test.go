@@ -35,6 +35,10 @@ var docOnly = map[string]bool{
 	"CS-RUN-016":   true, // clrsig request does not send an undefined value
 	"CS-RUN-017":   true, // the coverage gate and its reports
 	"CS-RUN-018":   true, // bundle run does not send the export placeholder
+	"CS-RUN-019":   true, // an unsupported schemaVersion is refused
+	"CS-RUN-020":   true, // no command sends the export placeholder
+	"CS-RUN-021":   true, // which spec coverage belongs to
+	"CS-RUN-022":   true, // import warnings
 	"CS-PROBE-005": true, // probes follow the filters
 }
 
