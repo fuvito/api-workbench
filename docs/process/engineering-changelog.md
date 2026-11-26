@@ -1145,3 +1145,8 @@ User-facing release notes are in the About dialog (`AboutDialog.tsx`) and on the
 - A release up to 0.14.1 refuses a project file with one of the new rules.
 - **Guards:** `packages/core/conformance/time_limit_rules_test.go`. **Not done:** nothing warns about a rule that matches no operation (as before for prefixes).
 
+### 2026-11-26 — B-098: pull request annotations for diff and bundle run
+
+- `--format github` on both. `diff` annotates the operation in the new spec (the file alone for a removed one); `bundle run` the line of each failed step in the bundle. Changes are errors at or above `--fail-on`. Screen only, as before. The Action has no `bundle` command, so only `diff` is reachable through it.
+- **Guards:** `apps/cli/github_diff_bundle_test.go`. **Not verified:** how GitHub shows them in a real pull request.
+

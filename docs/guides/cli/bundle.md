@@ -57,7 +57,7 @@ The bundle is validated first; any error stops the run before anything is sent.
 | `--spec`, `-s` | OpenAPI file or URL; replaces every scenario's spec. | |
 | `--seed` | Seed for random and dynamic values. | Random, printed in the report. |
 | `--show-extracted` | Shows extracted values, secret-looking names included. | Off. |
-| `--format`, `-f` | `text`, `json`, `junit`, `html` or `markdown`. | `text` |
+| `--format`, `-f` | `text`, `json`, `junit`, `html`, `markdown`, or `github` (annotations on a GitHub pull request: each failed step, on the bundle file; not for `--report`). | `text` |
 | `--output`, `-o` | Writes that output to a file instead. | |
 | `--report` | `format=file`: also write another report. Repeatable. | |
 

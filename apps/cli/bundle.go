@@ -157,7 +157,7 @@ Exit codes:
 			start := time.Now()
 			bundlePath := args[0]
 
-			plan, err := planReports(format, reports, outputFile)
+			plan, err := planReportsWith([]string{"github"}, format, reports, outputFile)
 			if err != nil {
 				return err
 			}
@@ -219,6 +219,9 @@ Exit codes:
 
 			total := time.Since(start)
 			err = plan.emit(cmd, outputFile, func(f string) ([]byte, error) {
+				if f == "github" {
+					return []byte(reporting.RunGitHub(bundleGitHubRuns(bundlePath, runs, results))), nil
+				}
 				return bundleReport(f, b.Title, results, total)
 			})
 			if err != nil {
@@ -256,9 +259,28 @@ Exit codes:
 	cmd.Flags().StringVar(&envFile, "env-file", "", "Use an environment file instead of the bundle's own (YAML or JSON)")
 	cmd.Flags().StringVarP(&specFile, "spec", "s", "", "OpenAPI spec file or URL; replaces the spec of every scenario")
 	cmd.Flags().StringSliceVar(&only, "scenario", nil, "Run only the scenario with this title or file name (repeatable)")
-	cmd.Flags().StringVarP(&format, "format", "f", "text", formatUsage)
+	cmd.Flags().StringVarP(&format, "format", "f", "text", formatUsage+", or github (workflow commands that annotate a pull request, on the line of each failed step in the bundle)")
 	cmd.Flags().StringVarP(&outputFile, "output", "o", "", "Write the report to a file (parent directories created automatically)")
 	return cmd
+}
+
+// bundleGitHubRuns puts each scenario's annotations on the bundle file, on the lines of its steps.
+func bundleGitHubRuns(path string, runs []bundle.Runnable, results []*scenario.Result) []reporting.GitHubRun {
+	file := repoFile(path)
+	var lines [][]int
+	if file != "" {
+		if data, err := os.ReadFile(path); err == nil {
+			lines = bundle.StepLines(data)
+		}
+	}
+	out := make([]reporting.GitHubRun, len(results))
+	for i, r := range results {
+		out[i] = reporting.GitHubRun{Result: r, File: file}
+		if at := runs[i].Index; at < len(lines) {
+			out[i].StepLines = lines[at]
+		}
+	}
+	return out
 }
 
 func bundleReport(format, title string, results []*scenario.Result, total time.Duration) ([]byte, error) {

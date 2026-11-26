@@ -128,7 +128,7 @@ The one living list of work that is not done yet. It is edited in place: tick an
 |---|---|---|---|---|---|
 | ☐ | B-096 | **Turn on GitHub Discussions** and add a contact link to the issue template config (a repository setting). | S | Decision | Left from B-032 |
 | ☐ | B-097 | **Searchable "What We Check" table** in the app, from the check data. | M | None | Left from B-049 |
-| ☐ | B-098 | **Pull-request annotations for `diff` and `bundle run`.** | S–M | None | Left from B-087 |
+| ☑ | B-098 | **Pull-request annotations for `diff` and `bundle run`.** **Done 2026-11-26** (not yet released): `--format github` on `diff` and `bundle run`. | S–M | None | Left from B-087 |
 | ☐ | B-099 | **Vulnerability scan in CI.** A scanner is outside the locked tool list. | S | Decision | Left from B-090 |
 | ☐ | B-100 | **An anchor per check ID in the HTML report.** Of little use without scripts in a self-contained report. | S | Decision | Left from B-092 |
 | ☐ | B-101 | **A `docs/CHANGELOG.md` that the About dialog renders.** | S–M | None | Left from B-094 |

@@ -52,7 +52,7 @@ Exit codes:
 		},
 	}
 
-	cmd.Flags().StringVarP(&o.format, "format", "f", "text", formatUsage)
+	cmd.Flags().StringVarP(&o.format, "format", "f", "text", formatUsage+", or github (workflow commands that annotate a pull request, on the operation in the new spec)")
 	cmd.Flags().StringVarP(&o.outputFile, "output", "o", "", "Write report to file (parent directories created automatically)")
 	cmd.Flags().StringArrayVar(&o.reports, "report", nil, "Also write a report to a file: format=file, for example junit=reports/diff.xml (repeatable)")
 	cmd.Flags().BoolVar(&o.breakingOnly, "breaking-only", false, "Show only breaking changes")
@@ -69,7 +69,7 @@ func runDiff(cmd *cobra.Command, args []string, o diffOptions) error {
 	if o.breakingOnly && failOn != openapi.FailOnBreaking {
 		return fmt.Errorf("--breaking-only hides the changes --fail-on %s would fail on; use one or the other", failOn)
 	}
-	plan, err := planReports(o.format, o.reports, o.outputFile)
+	plan, err := planReportsWith([]string{"github"}, o.format, o.reports, o.outputFile)
 	if err != nil {
 		return err
 	}
@@ -134,6 +134,10 @@ func runDiff(cmd *cobra.Command, args []string, o diffOptions) error {
 			return b, nil
 		case "markdown":
 			return reporting.DiffMarkdown(result, changes, failOn), nil
+		case "github":
+			// the new spec is the one in the pull request
+			revision := args[len(args)-1]
+			return []byte(reporting.DiffGitHub(result, changes, failOn, githubLocator(revision, revData))), nil
 		case "json":
 			return diffJSON(result, changes, failOn)
 		}

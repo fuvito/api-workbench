@@ -28,8 +28,7 @@
 
 | Command | `--format` values | `--report` (extra files) | `--output` |
 |---|---|---|---|
-| `conform`, `run` | `text`, `json`, `junit`, `html`, `markdown`, `github` | Yes, every one but `github` | Yes |
-| `diff`, `bundle run` | `text`, `json`, `junit`, `html`, `markdown` | Yes | Yes |
+| `conform`, `run`, `diff`, `bundle run` | `text`, `json`, `junit`, `html`, `markdown`, `github` | Yes, every one but `github` | Yes |
 | `coverage list`, `quality` | `text`, `json`, `csv`, `markdown`, `html` | No | Yes |
 | `validate` | `text`, `json` | No | Yes |
 | `impact` | `text`, `json` | No | Yes |

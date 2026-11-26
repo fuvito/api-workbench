@@ -14,6 +14,8 @@ type Runnable struct {
 	// File is the bundle name the scenario would be saved under (without extension).
 	File     string
 	Scenario *domain.Scenario
+	// Index is the scenario's position in the bundle, which filtering keeps.
+	Index int
 }
 
 // Materialize returns every scenario of the bundle in bundle order, ready to run.
@@ -30,7 +32,7 @@ func Materialize(b *serialization.Bundle, opts Options) []Runnable {
 	}
 
 	out := make([]Runnable, 0, len(b.Scenarios))
-	for _, bs := range b.Scenarios {
+	for index, bs := range b.Scenarios {
 		sc := *bs.Scenario
 		sc.SpecFile = effectiveSpec(b, bs.Scenario, opts)
 		sc.Steps = append([]domain.ScenarioStep(nil), bs.Scenario.Steps...)
@@ -49,7 +51,7 @@ func Materialize(b *serialization.Bundle, opts Options) []Runnable {
 		if err != nil {
 			stem = bs.Scenario.Title
 		}
-		out = append(out, Runnable{File: stem, Scenario: &sc})
+		out = append(out, Runnable{File: stem, Scenario: &sc, Index: index})
 	}
 	return out
 }

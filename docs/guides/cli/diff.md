@@ -24,7 +24,7 @@ The **base** is the old version, the **revision** the new one. The order matters
 | `--against` | Compare one spec file with its version at a git ref, such as `origin/main`. | Needs git. Give one file. |
 | `--fail-on` | The least serious change that fails the command: `breaking`, `warning` or `info`. | `breaking` |
 | `--breaking-only` | Show only breaking changes. | Refused together with `--fail-on info` or `warning`, which it would hide. |
-| `--format`, `-f` | `text`, `json`, `junit`, `html` or `markdown`. | `text` |
+| `--format`, `-f` | `text`, `json`, `junit`, `html`, `markdown`, or `github` (annotations on a GitHub pull request: each change, on the new spec; not for `--report`). | `text` |
 | `--output`, `-o` | Writes that output to a file instead; folders are created. | |
 | `--report` | `format=file`: also write another report from the same run. Repeatable. | |
 

@@ -51,26 +51,35 @@ func changedOperationScope(src, ref string, spec *openapi.Spec) (map[string]bool
 // githubLocator points an annotation at an operation in the spec file, when the spec is a local file
 // inside the current folder; for a URL or a file elsewhere the annotations stay on the run.
 func githubLocator(src string, data []byte) reporting.Locator {
-	if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") {
+	file := repoFile(src)
+	if file == "" {
 		return nil
 	}
-	abs, err := filepath.Abs(src)
-	if err != nil {
-		return nil
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil
-	}
-	rel, err := filepath.Rel(cwd, abs)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return nil
-	}
-	file := filepath.ToSlash(rel)
 	lines := openapi.OperationLines(data)
 	return func(method, specPath string) (string, int) {
 		return file, lines[openapi.OperationKey(method, specPath)]
 	}
+}
+
+// repoFile is src as an annotation names a file: relative to the current folder, with forward
+// slashes. It is "" for a URL and for a file outside that folder.
+func repoFile(src string) string {
+	if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") {
+		return ""
+	}
+	abs, err := filepath.Abs(src)
+	if err != nil {
+		return ""
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	rel, err := filepath.Rel(cwd, abs)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return ""
+	}
+	return filepath.ToSlash(rel)
 }
 
 // githubRuns prepares scenario runs for annotation: the file relative to the current folder (when it
