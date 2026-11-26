@@ -10,12 +10,13 @@ import (
 )
 
 // currentDocs calls fn for every Markdown document that tells a reader what to do today. Reports,
-// plans, proposals, the archive, the engineering changelog and release note drafts are history.
+// plans, proposals, the archive, the both changelogs and release note drafts are history.
 func currentDocs(t *testing.T, fn func(rel, text string)) {
 	t.Helper()
 	root := filepath.Join("..", "..", "..")
 	history := []string{"docs/reports/", "docs/planning/", "docs/enhancements/", "docs/archive/",
-		"docs/process/engineering-changelog.md", "docs/process/release-notes-"}
+		"docs/process/engineering-changelog.md", "docs/process/release-notes-",
+		"apps/desktop/wails/help/changelog.md"}
 	count := 0
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -61,15 +62,15 @@ var reActionRef = regexp.MustCompile(`fuvito/api-workbench(?:/clrsig-action)?@([
 
 // Every Action reference a reader can copy names the release this tree is. A reference such as @v1,
 // for which no tag exists, fails the workflow before it starts. This compares with the version in
-// AboutDialog.tsx, not with git tags, because CI checks out without tags.
+// the changelog, not with git tags, because CI checks out without tags.
 func TestDocumentedActionRefsNameThisVersion(t *testing.T) {
-	about, err := os.ReadFile(filepath.Join("..", "..", "..", "apps", "desktop", "frontend", "src", "components", "AboutDialog.tsx"))
+	about, err := os.ReadFile(filepath.Join("..", "..", "..", "apps", "desktop", "wails", "help", "changelog.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := regexp.MustCompile(`(?m)^\s*version: '(\d+\.\d+\.\d+)'`).FindSubmatch(about)
+	m := regexp.MustCompile(`(?m)^## (\d+\.\d+\.\d+) — `).FindSubmatch(about)
 	if m == nil {
-		t.Fatal("the version was not found in AboutDialog.tsx")
+		t.Fatal("the version was not found in help/changelog.md")
 	}
 	want := "v" + string(m[1])
 	found := 0

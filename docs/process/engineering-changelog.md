@@ -1162,3 +1162,9 @@ User-facing release notes are in the About dialog (`AboutDialog.tsx`) and on the
 - **Effect:** through `clrsig mcp` run in such a folder, writes are refused, as for any read-only project.
 - **Guards:** `demo_project_file_test.go`.
 
+### 2026-11-26 — B-101: the release notes are a file
+
+- `help/changelog.md` is the one copy; the About dialog reads it at build time and the app's version is its first heading. The 35 releases and 160 lines were moved by evaluating the old list, and the parsed file was compared with it once: equal.
+- **Release steps change:** add the entry to `help/changelog.md`, not `AboutDialog.tsx`.
+- **Guards:** `changelog.test.ts`, `TestVersionsAgree`, `TestDocumentedActionRefsNameThisVersion`.
+

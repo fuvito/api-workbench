@@ -644,8 +644,8 @@ cd apps/desktop/e2e && npx playwright test --grep "@screenshot"
 
 Then verify manually:
 
-- [ ] Version bumped in `apps/desktop/frontend/src/components/AboutDialog.tsx` and `apps/desktop/wails/help/user-guide.md`
-- [ ] Release notes entry added in `AboutDialog.tsx` (`RELEASE_NOTES` array)
+- [ ] Version bumped in `apps/desktop/wails/help/changelog.md` and `apps/desktop/wails/help/user-guide.md`
+- [ ] Release notes entry added at the top of `help/changelog.md`
 - [ ] Screenshots in `docs/images/` look correct in the README (the screenshot suites rewrite them)
 - [ ] `docs/process/release-process.md` section 2 and 4 walked through (CI green on the exact commit you tag, Docker `--version`, the tap bump commit)
 

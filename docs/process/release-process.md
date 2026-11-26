@@ -28,16 +28,16 @@ Clear Signal ships from five places simultaneously. This doc covers what to do b
 ### 2a. Bump the version in two files
 
 ```
-apps/desktop/frontend/src/components/AboutDialog.tsx   ← version string + RELEASE_NOTES entry
+apps/desktop/wails/help/changelog.md                   ← new "## X.Y.Z — date" entry at the top
 apps/desktop/wails/help/user-guide.md                  ← same
 ```
 
 Then update every `uses:` reference to this Action in the current documents to the new version (`TestDocumentedActionRefsNameThisVersion` fails until they agree). Until the tag is pushed those references name a tag that does not exist, so tag soon after the release commit passes CI.
 
-`RELEASE_NOTES` in `AboutDialog.tsx` is an array — prepend a new entry for this release; don't edit old ones.
+`help/changelog.md` is the one copy of the release notes (the About dialog shows it) — add a new entry above the others; don't edit old ones.
 
 - [ ] Version bumped in both files (also the two version tests: `AboutDialog.test.tsx`, `App.test.tsx`)
-- [ ] Release notes entry added in `AboutDialog.tsx`
+- [ ] Release notes entry added in `help/changelog.md`
 
 ### 2b. Run the pre-release checks
 
