@@ -4,6 +4,19 @@ import { FEEDBACK_URL, openExternal } from '@/lib/external'
 
 const RELEASE_NOTES: Array<{ version: string; date: string; items: string[] }> = [
   {
+    version: '0.14.0',
+    date: '2026-11-25',
+    items: [
+      'Read before upgrading (user guide, Troubleshooting, Upgrading to 0.14.0): some runs that passed now stop',
+      'A value nothing defines is no longer sent: clrsig request, the request editor and Run folder. A secret still holding the CHANGE_ME of a bundle export counts as having no value, everywhere',
+      'A request, scenario or environment file with a schemaVersion other than 1 is refused',
+      'coverage quality --fail-on-gaps now fails when nothing was recorded, and a workspace folder that does not exist is an error',
+      'Coverage is kept per spec file or web address. Older entries are renamed when first read; do not return to 0.13.5 on the same workspace',
+      'Importing from Postman or Insomnia now lists what could not be converted, test scripts included',
+      'The detailed command-line guide is complete: tasks, exit codes and troubleshooting',
+    ],
+  },
+  {
     version: '0.13.5',
     date: '2026-11-25',
     items: [
