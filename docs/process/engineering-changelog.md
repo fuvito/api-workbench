@@ -1116,3 +1116,10 @@ User-facing release notes are in the About dialog (`AboutDialog.tsx`) and on the
 - With the downloaded Windows binary, 11 behaviour checks matched the notes. **The coverage migration check failed (B-152):** the test happened to have a spec beside the workspace at the path a scenario writes, and the old entry was renamed to that file. With that file removed, the same checks all passed, the migration of data recorded by 0.13.5 included. The migration tests and the earlier trial had no such file.
 - **Not done:** the sandbox still pins 0.13.5; the website still offers 0.13.5.
 
+### 2026-11-25 — B-152: old coverage is not matched to a file beside the workspace
+
+- Cause: `coverage.locate` tried the workspace folder first for any relative path, so a scenario's `../specs/api.yaml` was read from the workspace root, which leaves the workspace. The same lookup served the app when it asked by a scenario's spelling.
+- Fix: the workspace folder is tried only for paths that stay inside it; the text of an old entry is resolved from the folders of the scenarios that write it first; an old entry the workspace can place is not handed to a request for another spec.
+- **Guards:** `packages/core/coverage/beside_test.go`; all four failed before the fix.
+- **Not done:** no repair of an entry 0.14.0 already renamed, because nothing in it says which spec it was recorded for.
+

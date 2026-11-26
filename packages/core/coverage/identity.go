@@ -43,8 +43,10 @@ func Identify(workspacePath, ref string, bases ...string) string {
 
 func isURL(ref string) bool { return strings.Contains(ref, "://") }
 
-// locate finds the file ref means, or "" when there is none, or when the scenarios that write ref
-// mean different files by it: then there is no way to know which one is meant.
+// locate finds the file ref means, or "" when there is none, or when it cannot be told which is
+// meant. The workspace folder is tried only for a path that stays inside it: names are stored as
+// such paths, while one that leaves it ("../specs/api.yaml") was written from a folder further in,
+// and read from the root it would find a file beside the workspace (B-152).
 func locate(workspacePath, ref string, bases []string) string {
 	if filepath.IsAbs(ref) {
 		if isFile(ref) {
@@ -52,7 +54,7 @@ func locate(workspacePath, ref string, bases []string) string {
 		}
 		return ""
 	}
-	for _, base := range append(append([]string(nil), bases...), workspacePath) {
+	for _, base := range bases {
 		if base == "" {
 			continue
 		}
@@ -60,8 +62,30 @@ func locate(workspacePath, ref string, bases []string) string {
 			return file
 		}
 	}
+	if workspacePath != "" && filepath.IsLocal(ref) {
+		if file := filepath.Join(workspacePath, ref); isFile(file) {
+			return file
+		}
+	}
+	dirs := append(scenarioDirsWriting(workspacePath, ref), filepath.Join(workspacePath, "scenarios"))
+	return theOneFile(workspacePath, ref, dirs)
+}
+
+// locateWritten finds the file meant by the text of an old entry. That text is what a scenario or a
+// command wrote, so when scenarios write it their folders decide, before the workspace folder.
+func locateWritten(workspacePath, ref string) string {
+	if !filepath.IsAbs(ref) {
+		if writers := scenarioDirsWriting(workspacePath, ref); len(writers) > 0 {
+			return theOneFile(workspacePath, ref, writers)
+		}
+	}
+	return locate(workspacePath, ref, nil)
+}
+
+// theOneFile is the file ref means from the folders dirs, or "" when they give none or several.
+func theOneFile(workspacePath, ref string, dirs []string) string {
 	found := map[string]string{}
-	for _, dir := range append(scenarioDirsWriting(workspacePath, ref), filepath.Join(workspacePath, "scenarios")) {
+	for _, dir := range dirs {
 		if file := filepath.Join(dir, ref); isFile(file) {
 			found[nameOfFile(workspacePath, file)] = file
 		}
@@ -215,10 +239,15 @@ func upgrade(workspacePath string) {
 		if !ok || !isLegacy(e.Name(), cov) {
 			continue
 		}
-		if !isURL(cov.SpecFile) && locate(workspacePath, cov.SpecFile, nil) == "" {
-			continue
+		name := cov.SpecFile
+		if !isURL(name) {
+			file := locateWritten(workspacePath, name)
+			if file == "" {
+				continue
+			}
+			name = nameOfFile(workspacePath, file)
 		}
-		rename(workspacePath, path, cov, Identify(workspacePath, cov.SpecFile))
+		rename(workspacePath, path, cov, name)
 	}
 }
 
@@ -238,7 +267,13 @@ func find(workspacePath, ref string, bases []string) (string, StoredCoverage, bo
 		if !ok || cov.SpecFile != written || !isLegacy(legacyKey(written), cov) {
 			continue
 		}
-		if locate(workspacePath, written, nil) == "" && rename(workspacePath, old, cov, name) {
+		if !isURL(written) {
+			// one the workspace can place belongs to that spec, whoever is asking
+			if file := locateWritten(workspacePath, written); file != "" && nameOfFile(workspacePath, file) != name {
+				continue
+			}
+		}
+		if rename(workspacePath, old, cov, name) {
 			cov.SpecFile = name
 			return path, cov, true
 		}
