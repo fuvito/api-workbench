@@ -1,0 +1,13 @@
+# The Demo Server's project file: with it, "clrsig conform" and "clrsig run" need no arguments in
+# this folder. The server must be running (Help > Dev Servers > Start Demo Server).
+schemaVersion: "1"
+spec: specs/openapi.yaml
+environment: environments/local.yaml
+baseUrl: http://localhost:DEMO_PORT
+
+conform:
+  readOnly: true   # only GET and HEAD are sent; --read-only=false also sends writes
+
+run:
+  # the scenarios that are meant to pass; the other folders show partial coverage and failures
+  scenarios: [scenarios/1-full-coverage]

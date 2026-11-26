@@ -184,6 +184,7 @@ The one living list of work that is not done yet. It is edited in place: tick an
 | ☑ | B-151 | **The app’s request editor and Run folder send a `{{name}}` nothing defines as text.** **Done 2026-11-25** (released as 0.14.0): both follow the rule of the command line, from one function in the core. CS-RUN-023. | S | Decision (it changes what the editor sends) | Found fixing B-149, 2026-11-25 |
 | ☑ | B-152 | **0.14.0 can move old coverage to the wrong spec.** When scenarios write a `../…` `specFile` and a file also exists at that path **seen from the workspace folder** (so beside the workspace), reading old coverage renames the entry to that outside file. New runs go to the right entry; the older results are not deleted but show under the wrong spec. Cause: the migration tries the workspace folder before the folders of the scenarios that wrote the path. **Fixed 2026-11-25** (released as 0.14.1). CS-RUN-021. An entry 0.14.0 already moved is not moved back. | S | None, **recommended next** | Found testing the downloaded 0.14.0, 2026-11-25 |
 | ☐ | B-153 | **The app does not keep `x-` keys when it saves a request, scenario or environment file.** `CLAUDE.md` section 8 asks to preserve extension fields where possible. | M | None | Found building B-121, 2026-11-26 |
+| ☑ | B-154 | **The demo servers’ workspaces include a `clrsig.yaml`.** **Done 2026-11-26** (not yet released). | S | None | Owner request, 2026-11-26 |
 
 ## Done
 

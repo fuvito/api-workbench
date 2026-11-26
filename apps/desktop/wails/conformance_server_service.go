@@ -171,6 +171,10 @@ func writeConformanceWorkspace(dir string, port int) error {
 	if err := os.WriteFile(filepath.Join(dir, "environments", ".gitignore"), []byte("*\n"), 0o644); err != nil {
 		return err
 	}
+	project := fmt.Sprintf(conformanceProjectFile, port)
+	if err := os.WriteFile(filepath.Join(dir, "clrsig.yaml"), []byte(project), 0o644); err != nil {
+		return err
+	}
 	for name, content := range conformanceWorkspaceFiles {
 		path := filepath.Join(dir, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -182,6 +186,21 @@ func writeConformanceWorkspace(dir string, port int) error {
 	}
 	return nil
 }
+
+// conformanceProjectFile is the workspace's clrsig.yaml; %d is the server's port.
+const conformanceProjectFile = `# The Conformance Server's project file: with it, "clrsig conform" and "clrsig run" need no
+# arguments in this folder. The check is meant to fail: the server breaks its spec on purpose.
+schemaVersion: "1"
+spec: specs/conformance-openapi.yaml
+environment: environments/local.yaml
+baseUrl: http://localhost:%d
+
+conform:
+  readOnly: true   # only GET and HEAD are sent; --read-only=false also sends writes
+
+run:
+  scenarios: [scenarios]
+`
 
 // conformanceWorkspaceFiles are the sample requests and the scenario that make the Requests and
 // Scenarios panels useful in the Conformance workspace. The scenario names the spec, so a run

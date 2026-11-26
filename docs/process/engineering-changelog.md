@@ -1156,3 +1156,9 @@ User-facing release notes are in the About dialog (`AboutDialog.tsx`) and on the
 - The bundle import dialog copies the matching `clrsig bundle import` command, quoted by the Command Builder's rules (PowerShell on Windows, bash elsewhere).
 - **Guards:** `bundle_workspace_test.go`, `bundle_command_test.go`, the dialog's tests. **Not verified:** the button in the running app.
 
+### 2026-11-26 — B-154: project files in the demo workspaces
+
+- The Demo Server's and the Conformance Server's temporary workspaces hold a `clrsig.yaml`: spec, environment, base URL with the server's port, `readOnly: true`, and the scenarios `run` takes (the Demo's full-coverage folder).
+- **Effect:** through `clrsig mcp` run in such a folder, writes are refused, as for any read-only project.
+- **Guards:** `demo_project_file_test.go`.
+
