@@ -22,6 +22,7 @@ FRONTEND = Path(__file__).resolve().parent.parent / "apps" / "desktop" / "fronte
 # Go type -> hand-written type, where the name is not the same (with or without the IO suffix).
 ALIASES = {
     "AuthIO": "AuthPayload",
+    "BodyIO": "RequestBody",
     "CoverageIO": "ScenarioCoverage",
     "EnvironmentInfoIO": "EnvInfo",
     "QualityIO": "QualityReport",
@@ -33,18 +34,7 @@ ALIASES = {
 }
 
 # Go types with no hand-written type of their own to compare with, and why.
-_INLINE = "written inline inside the types that contain it"
-UNCHECKED = {
-    "BodyIO": _INLINE,
-    "CliExplanationIO": _INLINE,
-    "CliPartIO": _INLINE,
-    "DashEnvVarIO": _INLINE,
-    "DashLastRunIO": _INLINE,
-    "HeaderIO": _INLINE,
-    "KVPairIO": _INLINE,
-    "OperationResultIO": _INLINE,
-    "QueryParamIO": _INLINE,
-}
+UNCHECKED = {}
 
 # Optional fields a TypeScript type has that this Go type never sends, on purpose.
 TS_ONLY = {

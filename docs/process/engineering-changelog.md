@@ -1168,3 +1168,7 @@ User-facing release notes are in the About dialog (`AboutDialog.tsx`) and on the
 - **Release steps change:** add the entry to `help/changelog.md`, not `AboutDialog.tsx`.
 - **Guards:** `changelog.test.ts`, `TestVersionsAgree`, `TestDocumentedActionRefsNameThisVersion`.
 
+### 2026-11-26 — B-128: every Go type the app receives is compared
+
+- The nine inline TypeScript object types have names in bridge.ts; check_bindings.py compares 81 of 81 and lists none as unchecked. Names only, as before.
+

@@ -142,6 +142,64 @@ import {
 
 // ---- Shared I/O types ----
 
+/** A request header as Go sends and receives it. */
+export interface Header {
+  name: string
+  value: string
+}
+
+export interface QueryParam {
+  name: string
+  value: string
+}
+
+/** A header or query parameter of a scenario step's request. */
+export interface KVPair {
+  name: string
+  value: string
+}
+
+export interface RequestBody {
+  type: string
+  content: string
+}
+
+export interface CliPart {
+  token: string
+  meaning: string
+}
+
+export interface DashEnvVar {
+  name: string
+  secret: boolean
+  set: boolean
+  unsetRef?: string
+}
+
+export interface DashLastRun {
+  at: string
+  scenario: string
+  passed: boolean
+  scenarios: number
+  failingNow: number
+}
+
+export interface OperationResult {
+  lastPassed: boolean
+  lastRunAt: string
+  lastDurationMs?: number
+  slowestDurationMs?: number
+}
+
+export interface CliExplanation {
+  goal: string
+  summary: string
+  when: string
+  parts: CliPart[]
+  outputs: string[]
+  exitCodes: CliExitCode[]
+}
+
 export interface AuthPayload {
   type: string
   token: string
@@ -155,9 +213,9 @@ export interface AuthPayload {
 export interface RequestPayload {
   method: string
   url: string
-  headers: Array<{ name: string; value: string }>
-  queryParams: Array<{ name: string; value: string }>
-  body?: { type: string; content: string }
+  headers: Header[]
+  queryParams: QueryParam[]
+  body?: RequestBody
   auth?: AuthPayload
   timeoutMs: number
   noFollowRedirects?: boolean
@@ -174,7 +232,7 @@ export interface TimingData {
 export interface ResponseData {
   statusCode: number
   status: string
-  headers: Array<{ name: string; value: string }>
+  headers: Header[]
   body: string
   durationMs: number
   size: number
@@ -183,7 +241,7 @@ export interface ResponseData {
   // the request as it was sent, credentials masked by the Go core; not stored in the response cache
   requestMethod?: string
   requestUrl?: string
-  requestHeaders?: Array<{ name: string; value: string }>
+  requestHeaders?: Header[]
   requestBody?: string
 }
 
@@ -212,7 +270,7 @@ export interface HistoryEntry {
   statusText: string
   durationMs: number
   sizeBytes: number
-  headers: { name: string; value: string }[]
+  headers: Header[]
   bodyType: string
   bodyContent: string
   auth?: AuthPayload
@@ -236,9 +294,9 @@ export interface RequestFileIO {
   title: string
   method: string
   url: string
-  headers?: Array<{ name: string; value: string }>
-  queryParams?: Array<{ name: string; value: string }>
-  body?: { type: string; content: string }
+  headers?: Header[]
+  queryParams?: QueryParam[]
+  body?: RequestBody
   auth?: AuthPayload
   timeoutMs?: number
   noFollowRedirects?: boolean
@@ -656,14 +714,7 @@ export interface CliBuildOutput {
   messages: CliMessage[]
   needs: CliNeed[]
   suggestions: CliSuggestion[]
-  explanation: {
-    goal: string
-    summary: string
-    when: string
-    parts: { token: string; meaning: string }[]
-    outputs: string[]
-    exitCodes: CliExitCode[]
-  }
+  explanation: CliExplanation
 }
 
 export async function getCliCatalog(): Promise<CliCommand[]> {
@@ -1064,8 +1115,8 @@ export interface StepDetail {
   disabled?: boolean
   method?: string
   url?: string
-  headers?: Array<{ name: string; value: string }>
-  queryParams?: Array<{ name: string; value: string }>
+  headers?: KVPair[]
+  queryParams?: KVPair[]
   bodyType?: string
   bodyContent?: string
   requestRef?: string
@@ -1111,12 +1162,12 @@ export interface StepResult {
   extracted: Record<string, string>
   assertions: AssertionResult[]
   responseBody?: string
-  responseHeaders?: Array<{ name: string; value: string }>
+  responseHeaders?: Header[]
   attempts?: number
   // the request as it was sent (variables and dynamic values filled in, credentials masked)
   requestMethod?: string
   requestUrl?: string
-  requestHeaders?: Array<{ name: string; value: string }>
+  requestHeaders?: Header[]
   requestBody?: string
   // spec conformance (absent when the scenario has no spec)
   specState?: 'matched' | 'violations' | 'not-checked'
@@ -1156,7 +1207,7 @@ export interface AccumulatedCoverage {
   lastRunAt?: string
   exercised: string[]
   missed: string[]
-  operationResults?: Record<string, { lastPassed: boolean; lastRunAt: string; lastDurationMs?: number; slowestDurationMs?: number }>
+  operationResults?: Record<string, OperationResult>
   quality?: QualityReport
 }
 
@@ -1479,9 +1530,9 @@ export type WorkspaceOverview = {
   environmentName?: string
   environmentPath?: string
   environmentSource: EnvironmentSource
-  envVars: { name: string; secret: boolean; set: boolean; unsetRef?: string }[]
+  envVars: DashEnvVar[]
   specs: DashSpec[]
-  lastRun?: { at: string; scenario: string; passed: boolean; scenarios: number; failingNow: number }
+  lastRun?: DashLastRun
   attention: AttentionItem[]
   // the clrsig.yaml in the workspace folder
   projectFile?: { found: boolean; path?: string; error?: string; keys: string[] }
