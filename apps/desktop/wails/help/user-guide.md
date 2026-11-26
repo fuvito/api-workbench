@@ -1209,6 +1209,20 @@ The Help panel (the `?` icon at the bottom of the Activity Rail, or the **Help**
 
 ## 16. Troubleshooting
 
+### Upgrading to 0.15.0
+
+No file format version changed. Some runs that passed can now fail, so check these first:
+
+| If | Now | What to do |
+|---|---|---|
+| A request, scenario or environment file has a key the format does not have, such as a misspelling | The file is refused, with the spelling probably meant | Correct the key. Start a key of your own with `x-`. |
+| A response or example declared as `format: uri` or `hostname` does not fit it, such as a relative link declared `uri` | It is a violation | Fix the value, or declare `uri-reference` in the spec. |
+| You use `conform --negative --fail-on warning` | A refusal that may be for another reason, and a rate-limited probe, fail the run | See CS-PROBE-007 and CS-PROBE-008 in What We Check. |
+
+A `clrsig.yaml` that uses a response-time rule for a tag or an operation is refused by releases before this one.
+
+**If you saved a scenario from the visual editor in 0.14.1 or earlier**, compare it with your version control: the save could drop `x-` keys, an assertion’s `name`, and a step request’s `title` and `timeout`, and could write a list or object under `expected` as text.
+
 ### Upgrading to 0.14.0 or later
 
 **Use 0.14.1, not 0.14.0.** When a scenario named its spec with a `../` path and another file existed at that path as read from the workspace folder, 0.14.0 could move older coverage to that other spec. 0.14.1 does not move it back. If `clrsig coverage list` shows the full path of a file outside your workspace that your tests did not mean: put back your copy of `.clrsig-coverage` from before the upgrade, before running 0.14.1 on it; or, without a copy, run `clrsig coverage reset <that full path> --workspace <folder>`, which removes that entry with its older results.
