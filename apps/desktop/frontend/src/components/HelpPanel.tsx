@@ -5,6 +5,7 @@ import { X, Copy, Download, CheckCircle2 } from 'lucide-react'
 import { getUserGuide, getFormatSpec, getWhatWeCheck, getExampleScenario, getAIPromptInstructions, getAIPrompt, saveContentToFile } from '@/lib/bridge'
 import { cn } from '@/lib/utils'
 import { extractScenarioYaml, extractScenarioFileName } from '@/lib/helpDocs'
+import { CheckTable } from '@/components/CheckTable'
 
 export type HelpTab = 'guide' | 'spec' | 'example' | 'prompt' | 'check'
 type Tab = HelpTab
@@ -153,6 +154,8 @@ export function HelpPanel({ onClose, initialTab = 'guide' }: Props) {
   const [example, setExample] = useState<string | null>(null)
   const [promptDoc, setPromptDoc] = useState<string | null>(null)
   const [catalog, setCatalog] = useState<string | null>(null)
+  // the What We Check tab shows the searchable table, or the whole document
+  const [catalogView, setCatalogView] = useState<'table' | 'document'>('table')
   // id of the header action that just succeeded, shown briefly as "Copied!" / "Saved!"
   const [doneAction, setDoneAction] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -193,7 +196,7 @@ export function HelpPanel({ onClose, initialTab = 'guide' }: Props) {
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0
-  }, [tab])
+  }, [tab, catalogView])
 
   function handleAnchorClick(href: string | undefined, e: React.MouseEvent) {
     if (!href?.startsWith('#')) return
@@ -371,7 +374,29 @@ export function HelpPanel({ onClose, initialTab = 'guide' }: Props) {
 
         {/* Content */}
         <div ref={scrollRef} className="overflow-y-auto flex-1 px-8 py-4">
-          {content === null ? (
+          {tab === 'check' && (
+            <div role="group" aria-label="View" className="flex gap-1 mb-3">
+              {([['table', 'Search'], ['document', 'Full document']] as const).map(([view, label]) => (
+                <button
+                  key={view}
+                  type="button"
+                  aria-pressed={catalogView === view}
+                  onClick={() => setCatalogView(view)}
+                  className={cn(
+                    'px-3 py-1 rounded text-xs font-medium transition-colors',
+                    catalogView === view
+                      ? 'bg-[var(--color-accent)]/15 text-[var(--color-foreground)]'
+                      : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]',
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          {tab === 'check' && catalogView === 'table' ? (
+            <CheckTable />
+          ) : content === null ? (
             <div className="text-sm text-[var(--color-muted-foreground)] py-8 text-center">Loading…</div>
           ) : (
             <MarkdownBody

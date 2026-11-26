@@ -136,6 +136,7 @@ import {
   GetUserGuide as WailsGetUserGuide,
   GetFormatSpec as WailsGetFormatSpec,
   GetWhatWeCheck as WailsGetWhatWeCheck,
+  GetCheckTable as WailsGetCheckTable,
   GetExampleScenario as WailsGetExampleScenario,
   GetAIPrompt as WailsGetAIPrompt,
   GetAIPromptInstructions as WailsGetAIPromptInstructions,
@@ -1499,6 +1500,24 @@ export async function applyWorkspaceImport(zipPath: string, strategy: string): P
 
 export async function getUserGuide(): Promise<string> {
   return (await WailsGetUserGuide()) as unknown as string
+}
+
+export interface CheckCell {
+  label: string
+  /** Markdown */
+  text: string
+}
+
+export interface CheckRow {
+  id: string
+  title: string
+  section: string
+  severity?: string
+  cells: CheckCell[]
+}
+
+export async function getCheckTable(): Promise<CheckRow[]> {
+  return (await WailsGetCheckTable()) as unknown as CheckRow[]
 }
 
 export async function getWhatWeCheck(): Promise<string> {

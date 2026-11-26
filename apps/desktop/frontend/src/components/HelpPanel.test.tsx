@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 
 vi.mock('@/lib/bridge', () => ({
-  getUserGuide: vi.fn(), getFormatSpec: vi.fn(), getWhatWeCheck: vi.fn(), getExampleScenario: vi.fn(), getAIPrompt: vi.fn(), getAIPromptInstructions: vi.fn(), saveContentToFile: vi.fn(),
+  getUserGuide: vi.fn(), getFormatSpec: vi.fn(), getWhatWeCheck: vi.fn(), getExampleScenario: vi.fn(), getAIPrompt: vi.fn(), getAIPromptInstructions: vi.fn(), saveContentToFile: vi.fn(), getCheckTable: vi.fn(),
 }))
 
 import * as bridge from '@/lib/bridge'
@@ -27,6 +27,7 @@ beforeEach(() => {
   b.getUserGuide.mockResolvedValue('# Guide body')
   b.getFormatSpec.mockResolvedValue('# Spec body')
   b.getWhatWeCheck.mockResolvedValue(catalogDoc)
+  b.getCheckTable.mockResolvedValue([{ id: 'CS-RESP-001', title: 'Undeclared response status', section: 'Failures', severity: 'failure', cells: [] }])
   b.getExampleScenario.mockResolvedValue(exampleDoc)
   b.getAIPromptInstructions.mockResolvedValue('# Prompt instructions')
   b.saveContentToFile.mockResolvedValue('/saved/file')
@@ -182,6 +183,9 @@ describe('HelpPanel: What We Check tab', () => {
     expect(b.getWhatWeCheck).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByText('What We Check'))
+    // the searchable table comes first, the document is one click away
+    expect(await screen.findByRole('searchbox', { name: 'Search the checks' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Full document' }))
     expect(await screen.findByText('CS-RESP-001')).toBeInTheDocument()
     expect(screen.getByText('Undeclared response status')).toBeInTheDocument()
     // an ID is meant to be quoted, so it never wraps
@@ -194,8 +198,12 @@ describe('HelpPanel: What We Check tab', () => {
     expect(b.getWhatWeCheck).toHaveBeenCalledTimes(1)
   })
 
-  it('opens straight on the catalog from the Help menu', async () => {
+  it('opens straight on the table from the Help menu, and goes back to it from the document', async () => {
     render(<HelpPanel onClose={vi.fn()} initialTab="check" />)
+    expect(await screen.findByRole('button', { name: 'CS-RESP-001' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Full document' }))
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }))
     expect(await screen.findByText('CS-RESP-001')).toBeInTheDocument()
   })
 
@@ -213,6 +221,7 @@ describe('HelpPanel: What We Check tab', () => {
   it('says so when the catalog cannot be loaded', async () => {
     b.getWhatWeCheck.mockRejectedValue(new Error('boom'))
     render(<HelpPanel onClose={vi.fn()} initialTab="check" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Full document' }))
     expect(await screen.findByText('Failed to load the list of checks.')).toBeInTheDocument()
   })
 })

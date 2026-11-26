@@ -290,6 +290,10 @@ export function setupMockBridge() {
         GetExampleScenario: () => Promise.resolve('# Example scenario'),
         GetAIPromptInstructions: () => Promise.resolve('# AI prompt'),
         GetAIPrompt: () => Promise.resolve('# AI prompt'),
+        GetCheckTable: () => Promise.resolve([
+          { id: 'CS-RESP-001', title: 'Undeclared response status', section: '1. API Contract Validation', severity: 'failure', cells: [{ label: 'What it means', text: 'The server answered a status the spec does not declare.' }] },
+          { id: 'CS-GAP-001', title: 'Formats other than date-time', section: '3. Known gaps', cells: [{ label: 'What is missed', text: 'email and uuid are not validated.' }] },
+        ]),
         GetWhatWeCheck: () => Promise.resolve([
           '# What Clear Signal checks', '',
           '## 1. API Contract Validation', '',

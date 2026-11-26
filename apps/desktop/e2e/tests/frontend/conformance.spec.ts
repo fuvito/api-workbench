@@ -98,6 +98,15 @@ test.describe('Check Conformance page', () => {
     await page.getByRole('menuitem', { name: 'What We Check…' }).click()
 
     await expect(page.getByRole('button', { name: 'What We Check' })).toBeVisible()
+
+    // the table first: search it and open a row
+    const search = page.getByRole('searchbox', { name: 'Search the checks' })
+    await search.fill('uuid')
+    await expect(page.getByRole('button', { name: 'CS-RESP-001' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'CS-GAP-001' }).click()
+    await expect(page.getByText('email and uuid are not validated.')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Full document' }).click()
     await expect(page.getByRole('heading', { name: 'What Clear Signal checks' })).toBeVisible()
     const row = page.getByRole('row', { name: /CS-RESP-001/ })
     await expect(row).toContainText('Undeclared response status')
@@ -109,6 +118,8 @@ test.describe('Check Conformance page', () => {
     await expect(page.getByText('A guide.')).toBeVisible()
     await page.getByRole('button', { name: 'What We Check' }).click()
     await expect(page.getByRole('row', { name: /CS-RESP-001/ })).toBeVisible()
+    await page.getByRole('button', { name: 'Search', exact: true }).click()
+    await expect(search).toBeVisible()
   })
 
   test('Get CLI command carries the page choices, read-only included', async ({ page }) => {

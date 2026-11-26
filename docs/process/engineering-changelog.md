@@ -1180,3 +1180,10 @@ User-facing release notes are in the About dialog (`AboutDialog.tsx`) and on the
 - **Guards:** `serialization/extensions_test.go`; `apps/desktop/testdata/scenario-roundtrip/` with `scenario_roundtrip_test.go` and `scenario-roundtrip.test.ts`, which tie the Go load to the TypeScript save (add new step fields to `original.yaml`).
 - **Not done:** comments, key order and anchors are still lost on a rebuilt save; bundles carry no `x-` keys. Not tried by hand in the running app.
 
+### 2026-11-26 — B-097: a searchable "What We Check" table
+
+- The Help tab opens on a table of every catalog row, with search, a section filter and rows that open; the document is one click away. `checks.ParseCatalog` reads the rows from `what-we-check.md` and takes severity from the check data; `HelpService.GetCheckTable` (new binding) gives them to the front end.
+- **Fixed on the way:** CS-PROBE-006 to 008 had seven columns in a five-column table, so the page did not show their last two cells. The table now has seven.
+- **Guards:** `checks/catalog_test.go` (every row, and every row's column count), `CheckTable.test.tsx`, `conformance.spec.ts`.
+- **Not done:** not looked at in the running app. The catalog's introduction no longer calls the IDs provisional.
+

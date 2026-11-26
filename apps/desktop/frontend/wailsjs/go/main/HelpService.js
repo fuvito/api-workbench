@@ -10,6 +10,10 @@ export function GetAIPromptInstructions() {
   return window['go']['main']['HelpService']['GetAIPromptInstructions']();
 }
 
+export function GetCheckTable() {
+  return window['go']['main']['HelpService']['GetCheckTable']();
+}
+
 export function GetExampleScenario() {
   return window['go']['main']['HelpService']['GetExampleScenario']();
 }

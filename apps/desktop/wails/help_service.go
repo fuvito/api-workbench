@@ -3,6 +3,8 @@ package main
 import (
 	_ "embed"
 	"strings"
+
+	"github.com/fuvito/api-workbench/packages/core/checks"
 )
 
 //go:embed help/user-guide.md
@@ -35,6 +37,34 @@ func (h *HelpService) GetExampleScenario() string { return exampleScenarioMarkdo
 
 // GetWhatWeCheck returns the catalog of checks, as shown in the Help panel's What We Check tab.
 func (h *HelpService) GetWhatWeCheck() string { return whatWeCheckMarkdown }
+
+// CheckRowIO is one row of the searchable table of checks.
+type CheckRowIO struct {
+	ID       string        `json:"id"`
+	Title    string        `json:"title"`
+	Section  string        `json:"section"`
+	Severity string        `json:"severity,omitempty"`
+	Cells    []CheckCellIO `json:"cells"`
+}
+
+// CheckCellIO is one more column of a row; its text is Markdown.
+type CheckCellIO struct {
+	Label string `json:"label"`
+	Text  string `json:"text"`
+}
+
+// GetCheckTable returns the catalog's rows, for the Help panel's table.
+func (h *HelpService) GetCheckTable() []CheckRowIO {
+	rows := checks.ParseCatalog(whatWeCheckMarkdown)
+	out := make([]CheckRowIO, len(rows))
+	for i, r := range rows {
+		out[i] = CheckRowIO{ID: r.ID, Title: r.Title, Section: r.Section, Severity: string(r.Severity), Cells: []CheckCellIO{}}
+		for _, c := range r.Cells {
+			out[i].Cells = append(out[i].Cells, CheckCellIO{Label: c.Label, Text: c.Text})
+		}
+	}
+	return out
+}
 
 // GetAIPromptInstructions returns the AI prompt document as shown in the Help panel.
 func (h *HelpService) GetAIPromptInstructions() string { return aiPromptMarkdown }
