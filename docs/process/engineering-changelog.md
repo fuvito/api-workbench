@@ -1123,3 +1123,11 @@ User-facing release notes are in the About dialog (`AboutDialog.tsx`) and on the
 - **Guards:** `packages/core/coverage/beside_test.go`; all four failed before the fix.
 - **Not done:** no repair of an entry 0.14.0 already renamed, because nothing in it says which spec it was recorded for.
 
+### 2026-11-26 — Released 0.14.1 (B-152)
+
+- Tagged `06efd2f` after all CI jobs passed on it. The sandbox had passed in GitHub Actions against `b731c4b`, which holds the fix; no Go file changed after it. Since 0.14.0 the only product code change is `packages/core/coverage/identity.go`.
+- With the owner's approval, a warning about B-152 was put at the top of the 0.14.0 release page; the rest of that page is unchanged.
+- All release jobs and all five post-release smoke jobs passed; the four checksum files match; Homebrew and Scoop carry the published hashes. With the downloaded Windows binary all 12 checks passed, the migration of data recorded by 0.13.5 included, **with** the spec beside the workspace that broke 0.14.0. On a copy of data 0.14.0 had moved, the reset the notes describe removed only the misplaced entry.
+- **For next time:** a migration test needs files in the places the old data could be wrongly matched to, not only where it should be.
+- **Not done:** the sandbox still pins 0.13.5; the website still offers 0.13.5.
+
