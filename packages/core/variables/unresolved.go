@@ -25,6 +25,26 @@ func MissingSecret(env *domain.Environment, req *domain.Request) error {
 	return nil
 }
 
+// NotSendable says why a request, already filled in by r, must not go out: a value that could not be
+// made, or a {{name}} that would reach the server with its braces. howToFix ends the message with
+// where the person can give the value. nil means it can be sent.
+func NotSendable(r *Resolver, env *domain.Environment, req *domain.Request, howToFix string) error {
+	if errs := r.TakeErrors(); len(errs) > 0 {
+		msgs := make([]string, len(errs))
+		for i, e := range errs {
+			msgs[i] = e.Error()
+		}
+		return fmt.Errorf("not sent: %s", strings.Join(msgs, "; "))
+	}
+	if err := MissingSecret(env, req); err != nil {
+		return err
+	}
+	if missing := UnresolvedPlaceholders(req); len(missing) > 0 {
+		return fmt.Errorf("not sent: no value for {{%s}} (%s)", strings.Join(missing, "}}, {{"), howToFix)
+	}
+	return nil
+}
+
 // UnresolvedPlaceholders lists, in order and without repeats, the {{names}} still present in a
 // request after variables were filled in: the ones nothing in the environment or the overrides
 // provided. Dynamic functions ({{$name}}) are not listed; their failures are reported separately.

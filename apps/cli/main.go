@@ -136,7 +136,7 @@ Exit codes:
 			}
 
 			var resp *domain.Response
-			execErr := notSendable(resolver, resolved)
+			execErr := variables.NotSendable(resolver, env, resolved, "set it in the environment file given with --env")
 			if execErr == nil {
 				resp, execErr = newExecutor().Execute(context.Background(), resolved)
 			}
@@ -165,22 +165,6 @@ Exit codes:
 	cmd.Flags().IntVar(&timeoutMs, "timeout", 0, "Request timeout in milliseconds (overrides file setting, 0 = use file value)")
 
 	return cmd
-}
-
-// notSendable says why a request must not go out: a value that could not be made, or a {{name}} that
-// would reach the server with its braces.
-func notSendable(resolver *variables.Resolver, req *domain.Request) error {
-	if errs := resolver.TakeErrors(); len(errs) > 0 {
-		msgs := make([]string, len(errs))
-		for i, e := range errs {
-			msgs[i] = e.Error()
-		}
-		return fmt.Errorf("not sent: %s", strings.Join(msgs, "; "))
-	}
-	if missing := variables.UnresolvedPlaceholders(req); len(missing) > 0 {
-		return fmt.Errorf("not sent: no value for {{%s}} (set it in the environment file given with --env)", strings.Join(missing, "}}, {{"))
-	}
-	return nil
 }
 
 func validateCmd() *cobra.Command {

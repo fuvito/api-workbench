@@ -776,7 +776,7 @@ func (s *ScenarioService) RunFolder(folderPath string) []FolderRunItemIO {
 		resolver := variables.NewResolver(env)
 		resolved := resolver.InterpolateRequest(req)
 
-		if err := variables.MissingSecret(env, resolved); err != nil {
+		if err := variables.NotSendable(resolver, env, resolved, howToGiveAValue); err != nil {
 			results = append(results, FolderRunItemIO{Name: name, Path: path, Method: string(req.Method), Error: err.Error()})
 			continue
 		}

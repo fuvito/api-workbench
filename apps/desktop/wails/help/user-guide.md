@@ -200,6 +200,8 @@ Secret values are also kept out of **reports**: wherever one would appear (an as
 
 ## 6. Sending requests and reading responses
 
+**A request with a value nothing defines is not sent.** If a `{{name}}` in the address, a parameter, a header, the body or the authentication has no value, the app says `not sent: no value for {{name}}` instead of sending the braces to the server; **Run folder** does the same for each request. Add the value to the environment, or choose an environment that has it. Releases up to 0.13.5 sent it as written.
+
 1. Set the HTTP method (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS) using the dropdown.
 2. Enter the URL. Pasting a URL containing a query string (e.g. `https://api.example.com/items?page=1&limit=20`) automatically extracts the parameters into the **Query Params** tab.
 3. Fill in the **Query Params**, **Headers**, **Body**, and **Auth** tabs as needed.
@@ -1205,6 +1207,22 @@ The Help panel (the `?` icon at the bottom of the Activity Rail, or the **Help**
 
 ## 16. Troubleshooting
 
+### Upgrading to 0.14.0
+
+No file format changed, and you do not have to convert anything. Some things that used to pass now stop, so check these after you upgrade, in your pipelines first:
+
+| If | Now | What to do |
+|---|---|---|
+| A step runs `coverage quality --fail-on-gaps` before anything was recorded | It fails | Record coverage in the same job, or keep the workspace folder between jobs. |
+| A `coverage` command names a workspace folder that does not exist | Exit `2` | Correct the name, or create the folder. |
+| A request, scenario or environment file says a `schemaVersion` other than `"1"` | It is refused | Correct it to `"1"`. A file with no version is still read. |
+| A request uses a `{{name}}` that nothing defines (`clrsig request`, the request editor, Run folder) | Not sent | Give the value. Text that must go out with `{{` `}}` can no longer be sent this way. |
+| A secret still holds the `CHANGE_ME` of a bundle export | It has no value, and a request that uses it is not sent | Put the real value in the environment, or use `--var`. |
+| A scenario uses an HTTP method that does not exist, or `validate` cannot read a file | `validate` reports it; an unreadable file is exit `2` | Correct the file or the path. |
+| A job counted on `coverage quality -f csv`, `markdown` or `html` failing on gaps | It exits `0` | Add `--fail-on-gaps`. |
+
+**Coverage you have recorded.** Spec files are now named by their path from the workspace root. Each older entry is renamed the first time it is read, when its spec can be told for certain; otherwise it is kept under its old name. **Do not go back to 0.13.5 or earlier on the same workspace:** it does not find renamed entries and starts new ones. If a CI system caches the workspace, pin one version for that cache. To be able to go back, copy the workspace's `.clrsig-coverage` folder before you upgrade.
+
 ### The app does not open after `wails dev`
 
 - Ensure a C compiler (`gcc`) is installed and on your PATH.
@@ -1235,9 +1253,9 @@ The Wails devserver (port 34115) allows only `localhost`, IP literals, and its o
 
 The executor tests use `httptest.NewServer` and require a free port. No external network access is required; all tests run against `localhost`. If the CI runner restricts networking, the tests will fail — ensure the runner allows loopback connections.
 
-### A `{{variable}}` appears literally in the sent request
+### `not sent: no value for {{variable}}`
 
-The variable is not defined in the active environment. Check the environment editor (pencil icon in the status bar) and confirm the variable name matches exactly, including case.
+The variable is not defined in the active environment. Check that an environment is chosen in the status bar, then open the environment editor (pencil icon) and confirm the name matches exactly, including case. A secret that still holds `CHANGE_ME` after a bundle import counts as not defined.
 
 ### The workspace sidebar is empty after opening a workspace
 

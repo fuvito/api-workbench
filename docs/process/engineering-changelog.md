@@ -1103,3 +1103,9 @@ User-facing release notes are in the About dialog (`AboutDialog.tsx`) and on the
 - **Found:** the request editor sends other undefined values as text (B-151, CS-GAP-028).
 - The new dialog and card line have component tests; the owner looked at the screens and accepted them (2026-11-25).
 
+### 2026-11-25 — B-151: the app does not send a value nothing defines
+
+- The request editor and Run folder use `variables.NotSendable`, as `clrsig request` now does. **Behaviour change:** a request that must carry `{{…}}` as text can no longer be sent from the app. A dynamic value that cannot be made also stops the request.
+- A request that was not sent is not added to history.
+- **Guards:** `apps/desktop/wails/undefined_value_test.go` replaces the test that pinned the gap (CS-RUN-023).
+

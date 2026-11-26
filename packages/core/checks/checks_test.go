@@ -39,6 +39,7 @@ var docOnly = map[string]bool{
 	"CS-RUN-020":   true, // no command sends the export placeholder
 	"CS-RUN-021":   true, // which spec coverage belongs to
 	"CS-RUN-022":   true, // import warnings
+	"CS-RUN-023":   true, // the app does not send an undefined value
 	"CS-PROBE-005": true, // probes follow the filters
 }
 

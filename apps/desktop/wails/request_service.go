@@ -168,6 +168,9 @@ func (s *RequestService) close() {
 	}
 }
 
+// howToGiveAValue ends the message about a request that was not sent.
+const howToGiveAValue = "add it to the environment chosen in the status bar, or choose one that has it"
+
 // Execute is the Wails-bound method called by the frontend.
 // Network errors and validation failures are returned in ResponseOutput.Error
 // rather than as Go errors, so the frontend always receives a consistent type.
@@ -188,7 +191,7 @@ func (s *RequestService) Execute(input RequestInput) ResponseOutput {
 		return out
 	}
 
-	if err := variables.MissingSecret(env, resolved); err != nil {
+	if err := variables.NotSendable(resolver, env, resolved, howToGiveAValue); err != nil {
 		return sent(ResponseOutput{Error: err.Error()})
 	}
 
