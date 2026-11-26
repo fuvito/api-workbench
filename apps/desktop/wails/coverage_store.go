@@ -47,7 +47,7 @@ type AccumulatedCoverageIO struct {
 }
 
 // coverageKey / coverageDirPath / loadStoredCoverage / saveStoredCoverage /
-// mergeExercised are thin aliases kept here so scenario_service.go call sites
+// mergeExercised are thin aliases kept here so the scenario service call sites
 // remain unchanged while the real logic lives in packages/core/coverage.
 
 func coverageDirPath(workspacePath string) string { return coverage.DirPath(workspacePath) }
