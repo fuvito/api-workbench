@@ -3,7 +3,7 @@
 
 Wails generates frontend/wailsjs/go/models.ts from the bound Go methods (the file is not committed:
 run `wails generate module` in apps/desktop/wails first). The app does not use those classes: its
-types are written by hand, mostly in frontend/src/lib/bridge.ts, and the results are cast to them,
+types are written by hand, mostly in frontend/src/lib/bridge/, and the results are cast to them,
 so the compiler cannot see a field that was added, removed or renamed in Go. This compares the
 field names of each Go type with its hand-written type.
 
@@ -127,15 +127,14 @@ def main(argv=None) -> int:
     parser.add_argument("--models", type=Path, default=FRONTEND / "wailsjs" / "go" / "models.ts")
     parser.add_argument(
         "--types", type=Path, nargs="+",
-        default=[FRONTEND / "src" / "lib" / "bridge.ts", FRONTEND / "src" / "lib" / "dynamicFunctions.ts"],
+        default=[*sorted((FRONTEND / "src" / "lib" / "bridge").glob("*.ts")), FRONTEND / "src" / "lib" / "dynamicFunctions.ts"],
     )
     args = parser.parse_args(argv)
     if not args.models.is_file():
         print(f"{args.models} does not exist: run `wails generate module` in apps/desktop/wails first", file=sys.stderr)
         return 1
-    types = {}
-    for path in args.types:
-        types.update(parse_types(path.read_text(encoding="utf-8")))
+    # read as one text: a type may extend one that another file declares
+    types = parse_types("\n".join(path.read_text(encoding="utf-8") for path in args.types))
     classes = parse_models(args.models.read_text(encoding="utf-8"))
     problems, compared = check(classes, types, ALIASES, UNCHECKED, TS_ONLY)
     for problem in problems:
