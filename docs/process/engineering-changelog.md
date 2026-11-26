@@ -1187,3 +1187,13 @@ User-facing release notes are in the About dialog (`AboutDialog.tsx`) and on the
 - **Guards:** `checks/catalog_test.go` (every row, and every row's column count), `CheckTable.test.tsx`, `conformance.spec.ts`.
 - **Not done:** not looked at in the running app. The catalog's introduction no longer calls the IDs provisional.
 
+### 2026-11-26 — B-102 and five more large files split
+
+Reorganised only; no behaviour change intended. One commit per file.
+
+- **Go:** `scenario_service.go`, `workspace_service.go`, `apps/cli/main.go` and `reporting/report.go` were split by what the code does. Whole declarations moved; a tool compared every declaration before and after.
+- **`lib/bridge.ts`** now re-exports `lib/bridge/*.ts` by topic, so imports and test mocks are unchanged. `check_bindings.py` reads the parts as one text.
+- **`App.tsx`** (1,624 to about 1,000 lines): menus (`lib/appMenus.ts`), URL paste (`lib/urlPaste.ts`) and hooks for panel sizes, the Conformance Server, batch runs, the file clipboard, adding a response to a scenario, scenario file actions and shortcuts. What is left is the state that ties them together and the page layout.
+- **Guards added:** `app-behaviour.spec.ts` (URL and cURL paste, shortcuts, sidebar resize), which no test covered; it passes on the old and the new `App.tsx`.
+- **Not done:** `App.tsx`'s layout was not split into components. Nothing was tried by hand in the desktop app.
+

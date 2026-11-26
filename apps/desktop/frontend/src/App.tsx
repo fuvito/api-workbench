@@ -1,6 +1,5 @@
 import {useEffect, useRef, useState} from 'react'
 import {QuickOpen} from '@/components/QuickOpen'
-import type {MenuDef} from '@/components/MenuBar'
 import {MenuBar} from '@/components/MenuBar'
 import {TabBar} from '@/components/TabBar'
 import {AppToolbar} from '@/components/AppToolbar'
@@ -48,54 +47,38 @@ import {useTabsState} from '@/hooks/useTabsState'
 import {useWorkspace} from '@/hooks/useWorkspace'
 import {useSettings} from '@/hooks/useSettings'
 import {useDemo} from '@/hooks/useDemo'
-import type {ScanImportResult, HistoryEntry, ScenarioDetail} from '@/lib/bridge'
+import type {ScanImportResult, HistoryEntry} from '@/lib/bridge'
 import {
-  cancelRequest,
-  cancelScenario,
-  clearResponseCache,
-  copyRequest,
-  copyScenario,
-  createScenario,
-  createScenarioFolder,
-  deleteScenario,
-  deleteScenarioFolder,
-  duplicateScenario,
-  executeRequest,
-  exportWorkspace,
-  exportBundle,
-  workspaceHasSecrets,
-  loadScenario,
-  moveRequest,
-  moveScenario,
-  openDemoSpec,
-  stopConformanceServer,
-  openConformanceSpec,
-  openConformanceWorkspace,
-  getCloseReminder,
-  pickFile,
-  quitApp,
-  renameScenario,
-  renameScenarioFolder,
-  runFolder,
-  cancelFolderRun,
-  runScenario,
-  saveContentToFile,
-  saveResponseCache,
-  saveScenarioRaw,
-  saveScenarioResult,
-  scanWorkspaceImport,
-  selectEnvironment,
-  stopDemo,
-  openInExplorer,
-  listDynamicFunctions,
+    cancelRequest,
+    clearResponseCache,
+    createScenario,
+    deleteScenario,
+    executeRequest,
+    exportWorkspace,
+    exportBundle,
+    workspaceHasSecrets,
+    getCloseReminder,
+    pickFile,
+    saveResponseCache,
+    scanWorkspaceImport,
+    selectEnvironment,
+    stopDemo,
+    openInExplorer,
+    listDynamicFunctions,
 } from '@/lib/bridge'
 import {setDynamicFunctions} from '@/lib/dynamicFunctions'
-import type {FileClipboard, FolderRunState, KVPair, RunAllState} from '@/types'
 import {authStateToPayload} from '@/lib/httpUtils'
-import {parseCurl} from '@/lib/curlImport'
-import {serializeScenarioToYAML} from '@/components/scenario-yaml'
-import {isTabDirty, isPageTab, withoutTabsIn} from '@/lib/tabState'
+import {isTabDirty, isPageTab} from '@/lib/tabState'
 import {iconForTab, isRailIcon, recordTab, tabToRestore, type LastTabs} from '@/lib/railIcons'
+import {usePanelSizes} from '@/hooks/usePanelSizes'
+import {useConformanceServer} from '@/hooks/useConformanceServer'
+import {useBatchRuns} from '@/hooks/useBatchRuns'
+import {useFileClipboard} from '@/hooks/useFileClipboard'
+import {useAddToScenario} from '@/hooks/useAddToScenario'
+import {useScenarioFileActions} from '@/hooks/useScenarioFileActions'
+import {useAppShortcuts} from '@/hooks/useAppShortcuts'
+import {applyUrlPaste} from '@/lib/urlPaste'
+import {buildAppMenus} from '@/lib/appMenus'
 
 export default function App() {
   // Cross-dependency ref: useTabsState needs refreshWorkspace before useWorkspace is initialized
@@ -137,38 +120,8 @@ export default function App() {
     onError: message => setAppError(message),
   })
 
-  const [conformancePort, setConformancePort] = useState(0)
-  const [conformanceWorkspace, setConformanceWorkspace] = useState('')
-  const [conformanceStarting, setConformanceStarting] = useState(false)
-  // Like the Demo Server: starting it opens its temporary workspace (the spec, a local environment,
-  // a sample scenario and requests) and stopping it closes that workspace again.
-  async function handleStartConformanceServer() {
-    if (conformanceStarting) return
-    setConformanceStarting(true)
-    try {
-      const result = await openConformanceWorkspace()
-      if (result.error) { setAppError(result.error); return }
-      setConformancePort(result.port)
-      setConformanceWorkspace(result.workspacePath ?? '')
-      await workspace.refreshWorkspace()
-      switchToExplorer()
-      tabs.openWorkspaceTab()
-      tabs.openConformanceTab()
-    } finally {
-      setConformanceStarting(false)
-    }
-  }
-  async function handleStopConformanceServer() {
-    const port = conformancePort
-    const wsPath = conformanceWorkspace
-    await stopConformanceServer()
-    setConformancePort(0)
-    setConformanceWorkspace('')
-    if (wsPath) {
-      tabs.setTabsState(prev => withoutTabsIn(prev, port > 0 ? `http://localhost:${port}` : null, wsPath))
-      await workspace.refreshWorkspace()
-    }
-  }
+  const conformance = useConformanceServer({ tabs, workspace, switchToExplorer, onError: message => setAppError(message) })
+  const { conformancePort, conformanceStarting, handleStartConformanceServer, handleStopConformanceServer } = conformance
 
   // Wire cross-dependency after both hooks are initialized
   // eslint-disable-next-line react/refs
@@ -177,14 +130,7 @@ export default function App() {
   // Window title is set by the Go side via runtime.WindowSetTitle — no React duplicate needed.
 
   // Layout state
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const v = parseInt(localStorage.getItem('ui.sidebarWidth') ?? '')
-    return isNaN(v) ? 224 : Math.max(160, Math.min(480, v))
-  })
-  const [responsePct, setResponsePct] = useState(() => {
-    const v = parseFloat(localStorage.getItem('ui.responsePct') ?? '')
-    return isNaN(v) || v === 0 ? 50 : Math.min(80, Math.max(10, v))
-  })
+  const { sidebarWidth, responsePct, startDrag } = usePanelSizes()
   const [railTab, setRailTab] = useState<RailTab>(() => {
     const saved = localStorage.getItem('ui.railTab')
     // 'history' was a rail tab of its own before it moved next to the requests list
@@ -216,12 +162,6 @@ export default function App() {
   const [appNotice, setAppNotice] = useState<string | null>(null)
   const [showQuickOpen, setShowQuickOpen] = useState(false)
   const [responseCollapsed, setResponseCollapsed] = useState(false)
-
-  const draggingRef = useRef<'sidebar' | 'response' | null>(null)
-  const sidebarWidthRef = useRef(sidebarWidth)
-  const responsePctRef = useRef(responsePct)
-  useEffect(() => { sidebarWidthRef.current = sidebarWidth }, [sidebarWidth])
-  useEffect(() => { responsePctRef.current = responsePct }, [responsePct])
 
   function openCliBuilder(preset?: { command: string; values?: Record<string, string> }) {
     if (preset) setCliPreset({ id: ++cliPresetSeq.current, ...preset })
@@ -263,9 +203,10 @@ export default function App() {
   const [showEnvEditor, setShowEnvEditor] = useState(false)
   const [editingEnvPath, setEditingEnvPath] = useState<string | null>(null)
   const [deletingScenario, setDeletingScenario] = useState<{ path: string; name: string; isDirty: boolean } | null>(null)
-  const [scenarioRenameError, setScenarioRenameError] = useState<string | null>(null)
   const [pendingCloseWorkspace, setPendingCloseWorkspace] = useState(false)
   const [pendingWorkspaceAction, setPendingWorkspaceAction] = useState<(() => void) | null>(null)
+
+  const { scenarioRenameError, scenarioActions } = useScenarioFileActions({ tabs, workspace, onAskDelete: setDeletingScenario })
 
   // What closing will remember, appended to the unsaved-changes confirmation.
   const [closeReminder, setCloseReminder] = useState('')
@@ -303,10 +244,6 @@ export default function App() {
     }
   }
 
-  // Run All Scenarios state
-  const [runAllState, setRunAllState] = useState<RunAllState | null>(null)
-  const runAllCancelRef = useRef(false)
-
   // Bump after each scenario run to refresh the run log
   const [runLogTrigger, setRunLogTrigger] = useState(0)
 
@@ -342,10 +279,6 @@ export default function App() {
   const [pendingImport, setPendingImport] = useState<ScanImportResult | null>(null)
   const [showBundleImport, setShowBundleImport] = useState(false)
   const [showExportSecretsWarning, setShowExportSecretsWarning] = useState(false)
-
-  // New scenario from response dialog
-  const [pendingAddToScenario, setPendingAddToScenario] = useState<{ defaultName: string } | null>(null)
-  const [newScenarioName, setNewScenarioName] = useState('')
 
   // Prefilled variable name for inline env creation
   const [prefilledVarName, setPrefilledVarName] = useState<string | null>(null)
@@ -389,160 +322,17 @@ export default function App() {
     setPendingImport(scan)
   }
 
-  // File clipboard for copy/cut/paste operations
-  const [fileClipboard, setFileClipboard] = useState<FileClipboard | null>(null)
-
-  // Run all requests in a folder
-  const [folderRunState, setFolderRunState] = useState<FolderRunState | null>(null)
-
-  const folderRunStoppedRef = useRef(false)
-
-  function handleCancelFolderRun() {
-    folderRunStoppedRef.current = true
-    cancelFolderRun().catch(() => {})
-  }
-
-  async function handleRunFolder(folderPath: string) {
-    const folderName = folderPath.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? folderPath
-    folderRunStoppedRef.current = false
-    setFolderRunState({ folderPath, folderName, running: true, results: [] })
-    try {
-      const results = await runFolder(folderPath)
-      setFolderRunState({ folderPath, folderName, running: false, stopped: folderRunStoppedRef.current, results })
-    } catch (e) {
-      setFolderRunState({ folderPath, folderName, running: false, results: [{ name: 'Error', path: '', method: '', statusCode: 0, durationMs: 0, error: String(e), passed: false }] })
-    }
-  }
-
-  // ── File clipboard ──────────────────────────────────────────────────────────
-
-  async function handlePasteToRequestFolder(destDir: string) {
-    if (!fileClipboard || fileClipboard.kind !== 'request') return
-    try {
-      if (fileClipboard.op === 'copy') {
-        await copyRequest(fileClipboard.srcPath, destDir)
-      } else {
-        await moveRequest(fileClipboard.srcPath, destDir)
-        setFileClipboard(null)
-      }
-      await workspace.refreshWorkspace()
-    } catch (e) { setAppError(String(e).replace(/^Error: /, '')) }
-  }
-
-  async function handlePasteToScenarioFolder(relFolderPath: string) {
-    if (!fileClipboard || fileClipboard.kind !== 'scenario') return
-    try {
-      if (fileClipboard.op === 'copy') {
-        await copyScenario(fileClipboard.srcPath, relFolderPath)
-      } else {
-        const newPath = await moveScenario(fileClipboard.srcPath, relFolderPath)
-        tabs.setTabsState(prev => ({
-          ...prev,
-          tabs: prev.tabs.map(t =>
-            t.kind === 'scenario' && t.scenarioPath === fileClipboard.srcPath
-              ? { ...t, scenarioPath: newPath }
-              : t
-          ),
-        }))
-        setFileClipboard(null)
-      }
-      await workspace.refreshWorkspace()
-    } catch (e) { setAppError(String(e).replace(/^Error: /, '')) }
-  }
-
-  async function handleMoveScenario(srcPath: string, destFolderRelPath: string) {
-    try {
-      const newPath = await moveScenario(srcPath, destFolderRelPath)
-      if (newPath) {
-        tabs.setTabsState(prev => ({
-          ...prev,
-          tabs: prev.tabs.map(t =>
-            t.kind === 'scenario' && t.scenarioPath === srcPath
-              ? { ...t, scenarioPath: newPath }
-              : t
-          ),
-        }))
-        await workspace.refreshWorkspace()
-      }
-    } catch (e) { setAppError(String(e).replace(/^Error: /, '')) }
-  }
-
-  function handleCancelRunAll() {
-    runAllCancelRef.current = true
-    cancelScenario().catch(() => {})
-  }
-
-  async function handleRunScenarioFolder(folderPath: string) {
-    const all = workspace.scenarioList.filter(s => !s.isFolder)
-    const list = folderPath === ''
-      ? all
-      : all.filter(s => s.folder === folderPath || s.folder?.startsWith(folderPath + '/'))
-    if (!list.length) return
-    const envPath = workspace.activeEnv?.path ?? ''
-    runAllCancelRef.current = false
-    tabs.openRunnerTab()
-    setRunAllState({ running: true, done: 0, total: list.length, passed: 0, results: [] })
-    let passedCount = 0
-    for (const s of list) {
-      if (runAllCancelRef.current) break
-      try {
-        const r = await runScenario(s.path, envPath)
-        if (r.passed) passedCount++
-        saveScenarioResult(s.path, r).catch(() => {})
-        setRunAllState(prev => prev ? {
-          ...prev,
-          done: prev.done + 1,
-          passed: passedCount,
-          results: [...prev.results, { path: s.path, name: s.title, passed: r.passed, durationMs: r.durationMs }],
-        } : prev)
-        setRunLogTrigger(t => t + 1)
-      } catch (e) {
-        setRunAllState(prev => prev ? {
-          ...prev,
-          done: prev.done + 1,
-          results: [...prev.results, { path: s.path, name: s.title, passed: false, durationMs: 0, error: String(e) }],
-        } : prev)
-      }
-    }
-    setRunAllState(prev => prev ? { ...prev, running: false } : prev)
-    setRunLogTrigger(t => t + 1)
-    setCoverageRefreshTrigger(t => t + 1)
-  }
-
-  async function handleRunAll() {
-    // The list also holds a placeholder per folder (so empty folders can be drawn); only scenarios run.
-    const list = workspace.scenarioList.filter(s => !s.isFolder)
-    if (!list.length) return
-    const envPath = workspace.activeEnv?.path ?? ''
-    runAllCancelRef.current = false
-    tabs.openRunnerTab()
-    setRunAllState({ running: true, done: 0, total: list.length, passed: 0, results: [] })
-    let passedCount = 0
-    for (const s of list) {
-      if (runAllCancelRef.current) break
-      try {
-        const r = await runScenario(s.path, envPath)
-        if (r.passed) passedCount++
-        saveScenarioResult(s.path, r).catch(() => {})
-        setRunAllState(prev => prev ? {
-          ...prev,
-          done: prev.done + 1,
-          passed: passedCount,
-          results: [...prev.results, { path: s.path, name: s.title, passed: r.passed, durationMs: r.durationMs }],
-        } : prev)
-        setRunLogTrigger(t => t + 1)
-      } catch (e) {
-        setRunAllState(prev => prev ? {
-          ...prev,
-          done: prev.done + 1,
-          results: [...prev.results, { path: s.path, name: s.title, passed: false, durationMs: 0, error: String(e) }],
-        } : prev)
-      }
-    }
-    setRunAllState(prev => prev ? { ...prev, running: false } : prev)
-    setRunLogTrigger(t => t + 1)
-    setCoverageRefreshTrigger(t => t + 1)
-  }
+  const {
+    runAllState, setRunAllState, folderRunState, setFolderRunState,
+    handleRunAll, handleRunScenarioFolder, handleCancelRunAll, handleRunFolder, handleCancelFolderRun,
+  } = useBatchRuns({
+    tabs,
+    workspace,
+    onRunLogged: () => setRunLogTrigger(t => t + 1),
+    onBatchDone: () => setCoverageRefreshTrigger(t => t + 1),
+  })
+  const { fileClipboard, setFileClipboard, handlePasteToRequestFolder, handlePasteToScenarioFolder, handleMoveScenario } =
+    useFileClipboard({ tabs, workspace, onError: setAppError })
 
   // Init
   useEffect(() => {
@@ -551,39 +341,6 @@ export default function App() {
     settings.loadSettings()
     Promise.resolve(listDynamicFunctions()).then(list => setDynamicFunctions(list ?? [])).catch(() => {})
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Resize
-  useEffect(() => {
-    function onMouseMove(e: MouseEvent) {
-      if (draggingRef.current === 'sidebar') {
-        setSidebarWidth(prev => Math.max(160, Math.min(480, prev + e.movementX)))
-      } else if (draggingRef.current === 'response') {
-        setResponsePct(prev => {
-          const availableWidth = window.innerWidth - sidebarWidthRef.current
-          const deltaPct = -(e.movementX / availableWidth) * 100
-          const next = Math.min(80, Math.max(10, prev + deltaPct))
-          responsePctRef.current = next
-          return next
-        })
-      }
-    }
-    function onMouseUp() {
-      if (draggingRef.current === 'sidebar') {
-        localStorage.setItem('ui.sidebarWidth', String(sidebarWidthRef.current))
-      } else if (draggingRef.current === 'response') {
-        localStorage.setItem('ui.responsePct', String(Math.round(responsePctRef.current)))
-      }
-      draggingRef.current = null
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener('mouseup', onMouseUp)
-    return () => {
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp)
-    }
-  }, [])
 
   // Request execution
   const handleSendRef = useRef<(() => void) | null>(null)
@@ -642,93 +399,18 @@ export default function App() {
     setTimeout(() => handleSendRef.current?.(), 0)
   }
 
-  function openAddToScenarioDialog() {
-    const { activeTab } = tabs
-    if (!activeTab.response || activeTab.response.error || !workspace.workspacePath) return
-    const urlPart = activeTab.url.replace(/^https?:\/\//, '').split('?')[0]
-      .split('/').filter(Boolean).pop() ?? 'request'
-    const defaultName = `${activeTab.method.toLowerCase()}-${urlPart}`.slice(0, 40)
-    setNewScenarioName(defaultName)
-    setPendingAddToScenario({ defaultName })
+  // The Scenarios sidebar, open, as after making or opening a scenario from elsewhere
+  function showScenarios() {
+    setRailTab('scenarios')
+    setSidebarOpen(true)
+    localStorage.setItem('ui.railTab', 'scenarios')
+    localStorage.setItem('ui.sidebarOpen', 'true')
   }
 
-  async function confirmAddToScenario() {
-    const name = newScenarioName.trim()
-    if (!name) return
-    setPendingAddToScenario(null)
-    const { activeTab } = tabs
-    if (!activeTab.response || !workspace.workspacePath) return
-    const stepLabel = `${activeTab.method} ${activeTab.url}`.slice(0, 60)
-    const scenario: ScenarioDetail = {
-      path: '',
-      title: name,
-      description: '',
-      steps: [{
-        label: stepLabel,
-        method: activeTab.method,
-        url: activeTab.url,
-        headers: activeTab.headers.filter(h => h.enabled && h.name.trim()).map(h => ({ name: h.name, value: h.value })),
-        queryParams: activeTab.queryParams.filter(p => p.enabled && p.name.trim()).map(p => ({ name: p.name, value: p.value })),
-        bodyType: activeTab.body.type !== 'none' ? activeTab.body.type : undefined,
-        bodyContent: activeTab.body.type !== 'none' ? activeTab.body.content : undefined,
-        assertions: [{ type: 'status', operator: 'eq', expected: activeTab.response.statusCode }],
-        extractions: [],
-      }],
-    }
-    const yaml = serializeScenarioToYAML(scenario)
-    try {
-      const result = await createScenario(name, '')
-      if (result.error || !result.path) { setAppError(result.error ?? 'Failed to create scenario'); return }
-      const saveErr = await saveScenarioRaw(result.path, yaml)
-      if (saveErr) { setAppError(saveErr); return }
-      await workspace.refreshWorkspace()
-      tabs.openScenarioAsTab(result.path, name)
-      setRailTab('scenarios')
-      setSidebarOpen(true)
-      localStorage.setItem('ui.railTab', 'scenarios')
-      localStorage.setItem('ui.sidebarOpen', 'true')
-    } catch (e) {
-      setAppError(String(e).replace(/^Error: /, ''))
-    }
-  }
-
-  async function handleAddToExistingScenario(scenarioPath: string, scenarioTitle: string) {
-    setPendingAddToScenario(null)
-    const { activeTab } = tabs
-    if (!activeTab.response || !workspace.workspacePath) return
-    try {
-      const existing = await loadScenario(scenarioPath)
-      if (existing.error) { setAppError(existing.error); return }
-      const stepLabel = `${activeTab.method} ${activeTab.url}`.slice(0, 60)
-      const updated = {
-        ...existing,
-        steps: [
-          ...existing.steps,
-          {
-            label: stepLabel,
-            method: activeTab.method,
-            url: activeTab.url,
-            headers: activeTab.headers.filter(h => h.enabled && h.name.trim()).map(h => ({ name: h.name, value: h.value })),
-            queryParams: activeTab.queryParams.filter(p => p.enabled && p.name.trim()).map(p => ({ name: p.name, value: p.value })),
-            bodyType: activeTab.body.type !== 'none' ? activeTab.body.type : undefined,
-            bodyContent: activeTab.body.type !== 'none' ? activeTab.body.content : undefined,
-            assertions: [{ type: 'status', operator: 'eq', expected: activeTab.response.statusCode }],
-            extractions: [],
-          },
-        ],
-      }
-      const yaml = serializeScenarioToYAML(updated)
-      const saveErr = await saveScenarioRaw(scenarioPath, yaml)
-      if (saveErr) { setAppError(saveErr); return }
-      tabs.openScenarioAsTab(scenarioPath, scenarioTitle)
-      setRailTab('scenarios')
-      setSidebarOpen(true)
-      localStorage.setItem('ui.railTab', 'scenarios')
-      localStorage.setItem('ui.sidebarOpen', 'true')
-    } catch (e) {
-      setAppError(String(e).replace(/^Error: /, ''))
-    }
-  }
+  const {
+    pendingAddToScenario, setPendingAddToScenario, newScenarioName, setNewScenarioName,
+    openAddToScenarioDialog, confirmAddToScenario, handleAddToExistingScenario,
+  } = useAddToScenario({ tabs, workspace, showScenarios, onError: setAppError })
 
   function handleCreateVariableFromHint(name: string) {
     setPrefilledVarName(name)
@@ -736,238 +418,17 @@ export default function App() {
     setShowEnvEditor(true)
   }
 
-  function handleUrlPaste(raw: string) {
-    const { activeTabId, activeTab, updateTab } = tabs
-    try {
-      const curlResult = parseCurl(raw)
-      if (curlResult) {
-        updateTab(activeTabId, {
-          method: curlResult.method,
-          url: curlResult.url,
-          queryParams: curlResult.queryParams,
-          headers: curlResult.headers,
-          body: curlResult.body,
-          auth: curlResult.auth,
-        })
-        return
-      }
-      const qIdx = raw.indexOf('?')
-      if (qIdx <= 0) return  // no '?' or starts with '?' — don't clobber existing URL
-      const baseUrl = raw.slice(0, qIdx)
-      const search = raw.slice(qIdx + 1)
-      const parsed = new URLSearchParams(search)
-      const extracted: KVPair[] = []
-      parsed.forEach((value, name) => {
-        extracted.push({ id: crypto.randomUUID(), name, value, enabled: true })
-      })
-      updateTab(activeTabId, { url: baseUrl })
-      if (extracted.length > 0) {
-        const names = new Set(extracted.map(p => p.name.toLowerCase()))
-        const kept = activeTab.queryParams.filter(p => !names.has(p.name.toLowerCase()))
-        updateTab(activeTabId, { queryParams: [...kept, ...extracted] })
-      }
-    } catch {
-      updateTab(activeTabId, { url: raw, saveError: 'Could not extract params from pasted URL' })
-      setTimeout(() => updateTab(activeTabId, { saveError: null }), 3000)
-    }
-  }
+  useAppShortcuts({ tabs, handleSendRef, workspacePathRef, setSidebarOpen, setShowQuickOpen })
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'S' && e.shiftKey) {
-        e.preventDefault()
-        tabs.handleSaveAll()
-      } else if ((e.ctrlKey || e.metaKey) && e.key === 's' && !e.shiftKey) {
-        e.preventDefault()
-        tabs.saveTabByIdRef.current(tabs.tabsStateRef.current.activeTabId)
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-        e.preventDefault()
-        tabs.handleNewTab()
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'w') {
-        e.preventDefault()
-        tabs.handleCloseTab(tabs.tabsStateRef.current.activeTabId)
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        const el = document.activeElement
-        if (el instanceof HTMLTextAreaElement) return
-        e.preventDefault()
-        handleSendRef.current?.()
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-        e.preventDefault()
-        setSidebarOpen(o => {
-          const next = !o
-          localStorage.setItem('ui.sidebarOpen', String(next))
-          return next
-        })
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
-        if (!workspacePathRef.current) return
-        e.preventDefault()
-        setShowQuickOpen(o => !o)
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') {
-        e.preventDefault()
-        const { tabs: tList, activeTabId } = tabs.tabsStateRef.current
-        if (tList.length < 2) return
-        const idx = tList.findIndex(t => t.id === activeTabId)
-        const next = e.shiftKey
-          ? (idx - 1 + tList.length) % tList.length
-          : (idx + 1) % tList.length
-        tabs.switchTo(tList[next].id)
-      }
-      const digit = parseInt(e.key)
-      if ((e.ctrlKey || e.metaKey) && digit >= 1 && digit <= 9) {
-        const { tabs: tList } = tabs.tabsStateRef.current
-        const target = tList[digit - 1]
-        if (target) { e.preventDefault(); tabs.switchTo(target.id) }
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Menus — context-sensitive: landing (no workspace) vs full (workspace open)
-  const helpMenu: MenuDef = {
-    label: 'Help',
-    items: [
-      {
-        kind: 'submenu',
-        label: 'Dev Servers',
-        items: [
-          {
-            kind: 'action',
-            label: demo.demoStarting ? 'Starting…' : demo.demoRunning ? 'Stop Demo Server' : 'Start Demo Server',
-            onClick: demo.demoRunning ? demo.handleStopDemo : () => requestWorkspaceSwitch(demo.handleStartDemo),
-            disabled: demo.demoStarting,
-          },
-          {
-            kind: 'action',
-            label: 'Demo Server API Spec',
-            disabled: !demo.demoRunning,
-            title: demo.demoRunning ? 'Open the Swagger UI for the demo server in your browser' : 'Start the demo server first',
-            onClick: () => openDemoSpec(),
-          },
-          { kind: 'separator' },
-          {
-            kind: 'action',
-            label: conformanceStarting ? 'Starting…' : conformancePort > 0 ? 'Stop Conformance Server' : 'Start Conformance Server',
-            disabled: conformanceStarting || (conformancePort === 0 && demo.demoRunning),
-            title: conformancePort === 0 && demo.demoRunning
-              ? 'Stop the Demo Server first: its workspace is open'
-              : 'A deliberately imperfect API (six operations break its spec). Starting it opens a workspace with its spec, a local environment and a sample scenario',
-            onClick: conformancePort > 0 ? handleStopConformanceServer : () => requestWorkspaceSwitch(handleStartConformanceServer),
-          },
-          {
-            kind: 'action',
-            label: 'Conformance Server API Spec',
-            disabled: conformancePort === 0,
-            title: conformancePort > 0 ? 'Open the Swagger UI for the conformance server in your browser' : 'Start the conformance server first',
-            onClick: () => openConformanceSpec(),
-          },
-        ],
-      },
-      { kind: 'separator' },
-      { kind: 'action', label: 'User Guide',   onClick: () => { setHelpInitialTab('guide'); setShowHelp(true) } },
-      { kind: 'action', label: 'Format Spec…', onClick: () => { setHelpInitialTab('spec');  setShowHelp(true) } },
-      { kind: 'action', label: 'Example Scenario…', onClick: () => { setHelpInitialTab('example'); setShowHelp(true) } },
-      { kind: 'action', label: 'AI Prompt…', onClick: () => { setHelpInitialTab('prompt'); setShowHelp(true) } },
-      { kind: 'action', label: 'What We Check…', onClick: () => { setHelpInitialTab('check'); setShowHelp(true) } },
-      { kind: 'separator' },
-      { kind: 'action', label: 'About Clear Signal', onClick: () => setShowAbout(true) },
-    ],
-  }
-  const viewMenu: MenuDef = {
-    label: 'View',
-    items: [
-      { kind: 'action', label: settings.settings.theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme', onClick: settings.handleToggleTheme },
-      { kind: 'separator' },
-      { kind: 'action', label: 'Settings…', onClick: () => settings.setShowSettings(true) },
-    ],
-  }
-  const recentWorkspacesSubmenu = {
-    kind: 'submenu' as const,
-    label: 'Recent Workspaces',
-    disabled: workspace.recentWorkspaces.length === 0,
-    items: workspace.recentWorkspaces.map(p => ({
-      kind: 'action' as const,
-      label: p.split(/[\\/]/).pop() ?? p,
-      title: p,
-      onClick: () => requestWorkspaceSwitch(() => workspace.handleOpenWorkspaceByPath(p)),
-    })),
-  }
-
-  const menus: MenuDef[] = workspace.workspacePath ? [
-    {
-      label: 'File',
-      items: [
-        { kind: 'action', label: 'Open Workspace…',  onClick: () => requestWorkspaceSwitch(workspace.handleOpenWorkspace) },
-        { kind: 'action', label: 'New Workspace…',   onClick: () => requestWorkspaceSwitch(workspace.handleNewWorkspace) },
-        { kind: 'action', label: 'Close Workspace',  onClick: requestCloseWorkspace },
-        { kind: 'separator' },
-        { kind: 'action', label: 'Export Workspace…', onClick: handleExportWorkspace },
-        { kind: 'action', label: 'Import Workspace…', onClick: handleImportWorkspace },
-        recentWorkspacesSubmenu,
-        { kind: 'separator' },
-        { kind: 'action', label: 'New Tab',       shortcut: 'Ctrl+N',        onClick: tabs.handleNewTab },
-        { kind: 'action', label: 'Save Request',  shortcut: 'Ctrl+S',        onClick: tabs.handleSaveRequest },
-        { kind: 'action', label: 'Save All',      shortcut: 'Ctrl+Shift+S',  onClick: tabs.handleSaveAll, disabled: tabs.dirtyFilePaths.size === 0 },
-        { kind: 'action', label: 'Save As…',                                 onClick: tabs.handleSaveAsRequest },
-        { kind: 'separator' },
-        {
-          kind: 'submenu',
-          label: 'Import',
-          items: [
-            { kind: 'action', label: 'OpenAPI Spec…',       onClick: workspace.handleImportOpenAPI },
-            { kind: 'action', label: 'OpenAPI from URL…',   onClick: () => { workspace.setImportFromURLInput(''); workspace.setImportFromURLError(''); workspace.setImportFromURLDialog(true) } },
-            { kind: 'separator' },
-            { kind: 'action', label: 'Bundle (environments + scenarios)…', onClick: () => setShowBundleImport(true) },
-            { kind: 'separator' },
-            { kind: 'action', label: 'Postman Collection…', onClick: workspace.handleImportPostman },
-            { kind: 'action', label: 'Insomnia Export…',    onClick: workspace.handleImportInsomnia },
-          ],
-        },
-        {
-          kind: 'submenu',
-          label: 'Export',
-          items: [
-            {
-              kind: 'action',
-              label: 'Save Response Body…',
-              disabled: !tabs.activeTab.response,
-              onClick: () => {
-                const body = tabs.activeTab.response?.body ?? ''
-                const ext = body.trimStart().startsWith('{') || body.trimStart().startsWith('[') ? '.json' : '.txt'
-                saveContentToFile(body, `response${ext}`)
-              },
-            },
-            { kind: 'separator' },
-            { kind: 'action', label: 'Bundle (environments + requests + scenarios)…', onClick: handleExportBundle },
-          ],
-        },
-        { kind: 'separator' },
-        { kind: 'action', label: 'Exit', onClick: quitApp },
-      ],
-    },
-    viewMenu,
-    helpMenu,
-  ] : [
-    {
-      label: 'File',
-      items: [
-        { kind: 'action', label: 'Open Workspace…', onClick: workspace.handleOpenWorkspace },
-        { kind: 'action', label: 'New Workspace…',  onClick: workspace.handleNewWorkspace },
-        recentWorkspacesSubmenu,
-        { kind: 'separator' },
-        { kind: 'action', label: 'Exit', onClick: quitApp },
-      ],
-    },
-    viewMenu,
-    helpMenu,
-  ]
+  const menus = buildAppMenus({
+    tabs, workspace, settings, demo,
+    conformancePort, conformanceStarting, handleStartConformanceServer, handleStopConformanceServer,
+    requestWorkspaceSwitch, requestCloseWorkspace,
+    handleExportWorkspace, handleImportWorkspace, handleExportBundle,
+    showHelp: tab => { setHelpInitialTab(tab); setShowHelp(true) },
+    showAbout: () => setShowAbout(true),
+    showBundleImport: () => setShowBundleImport(true),
+  })
 
   const { tabs: tabList, activeTabId, activeTab, updateTab } = tabs
   const closingTab = tabs.closingDirtyTabId ? tabList.find(t => t.id === tabs.closingDirtyTabId) : null
@@ -1157,10 +618,7 @@ export default function App() {
             if (result.error || !result.path) { setAppError(result.error ?? 'Failed to create scenario'); return }
             await workspace.refreshWorkspace()
             tabs.openScenarioAsTab(result.path, 'New Scenario')
-            setRailTab('scenarios')
-            setSidebarOpen(true)
-            localStorage.setItem('ui.railTab', 'scenarios')
-            localStorage.setItem('ui.sidebarOpen', 'true')
+            showScenarios()
           }}
           onClose={() => setShowQuickOpen(false)}
         />
@@ -1300,81 +758,13 @@ export default function App() {
                     onCopyScenario={path => setFileClipboard({ op: 'copy', kind: 'scenario', srcPath: path })}
                     onCutScenario={path => setFileClipboard({ op: 'cut', kind: 'scenario', srcPath: path })}
                     onPasteToScenarioFolder={handlePasteToScenarioFolder}
-                    onNewScenario={async (name, folderPath) => {
-                      const result = await createScenario(name, folderPath ?? '')
-                      if (!result.error && result.path) {
-                        await workspace.refreshWorkspace()
-                        tabs.openScenarioAsTab(result.path, name)
-                      }
-                    }}
-                    onNewScenarioFolder={async (parentFolderPath, name) => {
-                      const relPath = parentFolderPath ? `${parentFolderPath}/${name}` : name
-                      await createScenarioFolder(relPath)
-                      await workspace.refreshWorkspace()
-                    }}
-                    onRenameScenarioFolder={async (folderPath, newName) => {
-                      const result = await renameScenarioFolder(folderPath, newName)
-                      if (!result.startsWith('error:')) {
-                        await workspace.refreshWorkspace()
-                      }
-                    }}
-                    onDeleteScenarioFolder={async (folderPath) => {
-                      const scenDir = `${workspace.workspacePath.replace(/\\/g, '/')}/scenarios/`
-                      const matchingTabs = tabs.tabs.filter(t =>
-                        t.kind === 'scenario' && (t.scenarioPath ?? '').replace(/\\/g, '/').startsWith(scenDir + folderPath)
-                      )
-                      const err = await deleteScenarioFolder(folderPath)
-                      if (!err) {
-                        for (const t of matchingTabs) tabs.removeTab(t.id)
-                        await workspace.refreshWorkspace()
-                      }
-                    }}
-                    onNewScenarioFile={async (path, name) => {
-                      await workspace.refreshWorkspace()
-                      tabs.openScenarioAsTab(path, name)
-                    }}
-                    onDuplicateScenario={async (path) => {
-                      const result = await duplicateScenario(path)
-                      if (!result.error && result.path) {
-                        await workspace.refreshWorkspace()
-                        const name = result.path.split(/[\\/]/).pop()?.replace(/\.(yaml|yml|json)$/i, '') ?? 'copy'
-                        tabs.openScenarioAsTab(result.path, name)
-                      }
-                    }}
-                    onDeleteScenario={(path) => {
-                      const matchTab = tabs.tabs.find(t => t.kind === 'scenario' && t.scenarioPath === path)
-                      const name = workspace.scenarioList.find(s => s.path === path)?.title ?? path.split(/[\\/]/).pop()?.replace(/\.(yaml|yml|json)$/i, '') ?? 'scenario'
-                      setDeletingScenario({ path, name, isDirty: matchTab?.scenarioDirty ?? false })
-                    }}
-                    onRenameScenario={async (path, newName) => {
-                      const result = await renameScenario(path, newName)
-                      if (!result.startsWith('error:')) {
-                        const newPath = result
-                        tabs.setTabsState(prev => ({
-                          ...prev,
-                          tabs: prev.tabs.map(t =>
-                            t.kind === 'scenario' && t.scenarioPath === path
-                              ? { ...t, scenarioPath: newPath, scenarioName: newName, name: newName }
-                              : t
-                          ),
-                        }))
-                        await workspace.refreshWorkspace()
-                      } else {
-                        setScenarioRenameError(result.replace(/^error:\s*/i, ''))
-                        setTimeout(() => setScenarioRenameError(null), 4000)
-                      }
-                    }}
+                    {...scenarioActions}
                   />
                 </aside>
 
                 <div
                   className="w-1 shrink-0 cursor-col-resize hover:bg-[var(--color-accent)] transition-colors"
-                  onMouseDown={e => {
-                    e.preventDefault()
-                    draggingRef.current = 'sidebar'
-                    document.body.style.cursor = 'col-resize'
-                    document.body.style.userSelect = 'none'
-                  }}
+                  onMouseDown={e => startDrag('sidebar', e)}
                 />
               </>
             )}
@@ -1538,7 +928,7 @@ export default function App() {
                         auth={activeTab.auth}
                         onMethodChange={m => updateTab(activeTabId, { method: m })}
                         onUrlChange={u => updateTab(activeTabId, { url: u })}
-                        onUrlPaste={handleUrlPaste}
+                        onUrlPaste={raw => applyUrlPaste(raw, activeTab, updateTab)}
                         onQueryParamsChange={p => updateTab(activeTabId, { queryParams: p })}
                         onHeadersChange={h => updateTab(activeTabId, { headers: h })}
                         onBodyChange={b => updateTab(activeTabId, { body: b })}
@@ -1567,12 +957,7 @@ export default function App() {
                       <>
                         <div
                           className="w-1 shrink-0 cursor-col-resize hover:bg-[var(--color-accent)] transition-colors"
-                          onMouseDown={e => {
-                            e.preventDefault()
-                            draggingRef.current = 'response'
-                            document.body.style.cursor = 'col-resize'
-                            document.body.style.userSelect = 'none'
-                          }}
+                          onMouseDown={e => startDrag('response', e)}
                         />
 
                         <div
