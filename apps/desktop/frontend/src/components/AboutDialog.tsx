@@ -4,6 +4,13 @@ import { FEEDBACK_URL, openExternal } from '@/lib/external'
 
 const RELEASE_NOTES: Array<{ version: string; date: string; items: string[] }> = [
   {
+    version: '0.14.1',
+    date: '2026-11-26',
+    items: [
+      'Fixes recorded coverage in 0.14.0: when a scenario named its spec with a ../ path and another file existed at that path beside the workspace, older coverage could move to that other spec. Coverage already moved is not moved back (see the user guide, Upgrading)',
+    ],
+  },
+  {
     version: '0.14.0',
     date: '2026-11-25',
     items: [

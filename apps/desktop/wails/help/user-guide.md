@@ -1,6 +1,6 @@
 # Clear Signal User Guide
 
-**Version:** 0.14.0
+**Version:** 0.14.1
 
 ---
 
@@ -970,7 +970,7 @@ The CLI is the natural integration point for pipelines. Build it as part of your
 The quickest route needs no Go toolchain — use the published Action:
 
 ```yaml
-- uses: fuvito/api-workbench@v0.14.0
+- uses: fuvito/api-workbench@v0.14.1
   with:
     command: conform
     spec: openapi.yaml
@@ -1207,7 +1207,9 @@ The Help panel (the `?` icon at the bottom of the Activity Rail, or the **Help**
 
 ## 16. Troubleshooting
 
-### Upgrading to 0.14.0
+### Upgrading to 0.14.0 or later
+
+**Use 0.14.1, not 0.14.0.** When a scenario named its spec with a `../` path and another file existed at that path as read from the workspace folder, 0.14.0 could move older coverage to that other spec. 0.14.1 does not move it back. If `clrsig coverage list` shows the full path of a file outside your workspace that your tests did not mean: put back your copy of `.clrsig-coverage` from before the upgrade, before running 0.14.1 on it; or, without a copy, run `clrsig coverage reset <that full path> --workspace <folder>`, which removes that entry with its older results.
 
 No file format changed, and you do not have to convert anything. Some things that used to pass now stop, so check these after you upgrade, in your pipelines first:
 
