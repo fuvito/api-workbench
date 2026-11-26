@@ -1131,3 +1131,11 @@ User-facing release notes are in the About dialog (`AboutDialog.tsx`) and on the
 - **For next time:** a migration test needs files in the places the old data could be wrongly matched to, not only where it should be.
 - **Not done:** the sandbox still pins 0.13.5; the website still offers 0.13.5.
 
+### 2026-11-26 — B-121, B-118, B-119
+
+- **B-121:** request, scenario and environment files refuse unknown keys, with a suggestion (`serialization/keys.go`; the known keys are the yaml tags, so a new field needs no list). `x-` keys and the step and request keys of releases up to 0.3 are ignored. A folder run keeps a titled file whose `steps` is misspelled. Errors cut a "key" at `:`, `=` or a space, so a value is not repeated. Three of our own tests had used `name` for `title`, and one sandbox scenario had `extract` for `extractions`, so its extraction never ran.
+- **B-118:** a probe refused with a status that does not fit its fault warns (CS-PROBE-007); a `429` is not checked (CS-PROBE-008) and cannot mark a baseline entry fixed. `--fail-on warning` fails on both, and records them under those IDs. The JSON report adds `notChecked`, `checkId` and `warning` to a probe; the app shows both outcomes.
+- **B-119:** `uri` (a scheme is required; non-ASCII letters pass) and `hostname` (RFC 1123, no underscore) are checked, in responses, generated requests and spec examples.
+- **Can turn a passing run into a failing one:** an unknown key anywhere in these files; a `uri` or `hostname` value that does not fit (a relative link declared `uri` is the likely case); with `--fail-on warning`, doubtful probes. **Forward compatibility:** a file with a key added by a later release is refused by this one, as bundles and `clrsig.yaml` already do.
+- **Not done:** the app does not keep `x-` keys on save (B-153). The new formats were tried only on the specs of this repository and the sandbox.
+

@@ -125,7 +125,7 @@ clrsig validate --spec examples/server/openapi.yaml
 
 ## Common mistakes and limits
 
-- A key that is misspelled or unknown is ignored without a word, here and in `run` (backlog B-121).
+- **A misspelled or unknown key is a parse error**, with the spelling probably meant. Your own keys start with `x-`. Releases up to 0.14.1 ignored such keys, here and in `run`.
 - Releases up to 0.13.5 reported `OK` for a method that does not exist, and exited 1 for a file they could not read.
 
 ## Related commands and the desktop app

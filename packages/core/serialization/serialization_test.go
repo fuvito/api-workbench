@@ -239,9 +239,9 @@ func TestWriteScenario_RoundTrip(t *testing.T) {
 func TestParseScenario_WithRequestRef(t *testing.T) {
 	yaml := `
 schemaVersion: "1"
-name: Ref scenario
+title: Ref scenario
 steps:
-  - name: Reuse request
+  - label: Reuse request
     requestRef: "requests/create-user.yaml"
     assertions:
       - type: status

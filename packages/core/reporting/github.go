@@ -65,12 +65,18 @@ func ConformGitHub(result *conformance.ConformResult, neg *conformance.NegativeR
 				continue
 			}
 			var id, msg string
+			level := "error"
 			switch {
 			case p.Error != "":
 				id, msg = "CS-PROBE-006", "The server did not answer this probe: "+x.text(p.Error)
-			case !p.Passed():
+			case p.Failed():
 				id = conformance.ProbeCheckID(string(p.Kind))
 				msg = fmt.Sprintf("The server accepted an invalid request (status %d): %s. It should have refused it with a 4xx.", p.StatusCode, x.text(p.Description))
+			case p.WarningCheck() != "":
+				id, msg = p.WarningCheck(), x.text(p.Description)+": "+p.Warning()
+				if !p.FailsRun(neg.FailOn) {
+					level = "warning"
+				}
 			default:
 				continue
 			}
@@ -78,7 +84,7 @@ func ConformGitHub(result *conformance.ConformResult, neg *conformance.NegativeR
 			if loc != nil {
 				file, line = loc(p.Method, p.Path)
 			}
-			annotate("error", file, line, strings.TrimSpace(id+" "+p.Method+" "+p.Path), msg)
+			annotate(level, file, line, strings.TrimSpace(id+" "+p.Method+" "+p.Path), msg)
 		}
 	}
 

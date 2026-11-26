@@ -69,6 +69,8 @@ var all = []Check{
 	{"CS-PROBE-003", "Missing required query parameter or header accepted", Failure, AreaProbe},
 	{"CS-PROBE-004", "Missing credentials accepted", Failure, AreaProbe},
 	{"CS-PROBE-006", "A probe got no answer", Failure, AreaProbe},
+	{"CS-PROBE-007", "A probe refused, maybe for another reason", Warning, AreaProbe},
+	{"CS-PROBE-008", "A probe not checked: rate limited", Warning, AreaProbe},
 
 	{"CS-SPEC-001", "Operation without an operationId", Warning, AreaSpec},
 	{"CS-SPEC-002", "Required property that is not declared", Failure, AreaSpec},

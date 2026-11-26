@@ -201,6 +201,26 @@ describe('ConformanceTab options and export', () => {
     expect(screen.getByTestId('conform-coverage-note')).toHaveTextContent('Added to coverage as api.yaml.')
   })
 
+  it('tells a doubtful refusal and a rate-limited probe apart from a rejection', async () => {
+    const probe = (description: string, status: string, statusCode: number, warning?: string) =>
+      ({ operationId: 'a', method: 'GET', path: '/ok', kind: 'missing_auth', description, status, statusCode, warning })
+    bridge.runConformance.mockResolvedValue({ ...output, probes: [
+      probe('one', 'rejected', 401),
+      probe('two', 'rejected', 404, 'refused with 404, not 401 or 403'),
+      probe('three', 'not-checked', 429, 'not checked: the server answered 429'),
+    ] })
+    await chooseSpec()
+    fireEvent.click(screen.getByRole('button', { name: /Run conformance check/ }))
+    const region = await screen.findByRole('region', { name: 'Negative probes' })
+    expect(region).toHaveTextContent('1 rejected as they should be')
+    expect(region).toHaveTextContent('1 refused, maybe for another reason.')
+    expect(region).toHaveTextContent('1 not checked (rate limited).')
+    const rows = within(region).getAllByRole('listitem').map(li => li.textContent)
+    expect(rows[0]).toMatch(/^rejected/)
+    expect(rows[1]).toMatch(/^warning.*refused with 404, not 401 or 403/)
+    expect(rows[2]).toMatch(/^not-checked.*answered 429/)
+  })
+
   it('shows environment warnings above the results', async () => {
     bridge.runConformance.mockResolvedValue({ ...output, warnings: ['environment variable API_TOKEN is not set (the environment variable "token" refers to it as ${API_TOKEN})'] })
     await chooseSpec()

@@ -580,6 +580,11 @@ type JSONConformProbe struct {
 	Passed      bool   `json:"passed"`
 	Skipped     bool   `json:"skipped,omitempty"`
 	Error       string `json:"error,omitempty"`
+	// NotChecked: a rate limit left the probe unjudged. CheckID and Warning say what is doubtful
+	// about an answer; both are absent for a plain pass or failure.
+	NotChecked bool   `json:"notChecked,omitempty"`
+	CheckID    string `json:"checkId,omitempty"`
+	Warning    string `json:"warning,omitempty"`
 }
 
 type JSONConformOp struct {
@@ -651,8 +656,8 @@ type JSONCoverageOp struct {
 func ConformJSON(result *conformance.ConformResult, coverage *conformance.CoverageReport, neg *conformance.NegativeResult) ([]byte, error) {
 	_, failed, _ := result.Counts()
 	if neg != nil {
-		_, negFailed, _, negErrored := neg.Counts()
-		failed += negFailed + negErrored
+		_, _, _, negErrored := neg.Counts()
+		failed += neg.FailingProbes() + negErrored
 	}
 	x := newRedactor(result.Secrets, false)
 	report := JSONConformReport{
@@ -699,6 +704,7 @@ func ConformJSON(result *conformance.ConformResult, coverage *conformance.Covera
 				OperationID: p.OperationID, Method: p.Method, Path: p.Path, Kind: string(p.Kind), Description: x.text(p.Description),
 				StatusCode: p.StatusCode, DurationMs: p.DurationMs, Passed: !p.Skipped && p.Error == "" && p.Passed(),
 				Skipped: p.Skipped, Error: x.text(p.Error),
+				NotChecked: p.RateLimited(), CheckID: p.WarningCheck(), Warning: p.Warning(),
 			})
 		}
 	}
@@ -790,10 +796,20 @@ func ConformJUnit(result *conformance.ConformResult, neg *conformance.NegativeRe
 			case p.Error != "":
 				suite.Errors++
 				tc.Error = &jUnitError{Message: x.text(p.Error), Text: x.text(p.Error)}
-			case !p.Passed():
+			case p.Failed():
 				suite.Failures++
 				msg := fmt.Sprintf("the server accepted an invalid request with %d", p.StatusCode)
 				tc.Failure = &jUnitFailure{Message: msg, Text: msg}
+			case p.FailsRun(neg.FailOn):
+				suite.Failures++
+				msg := p.WarningCheck() + " " + p.Warning()
+				tc.Failure = &jUnitFailure{Message: msg, Text: msg}
+			case p.RateLimited():
+				skipped := struct{}{}
+				tc.Skipped = &skipped
+				tc.SystemOut = "warning: " + p.WarningCheck() + " " + p.Warning()
+			case p.WarningCheck() != "":
+				tc.SystemOut = "warning: " + p.WarningCheck() + " " + p.Warning()
 			}
 			suite.Cases = append(suite.Cases, tc)
 		}
@@ -851,6 +867,10 @@ func NegativeText(result *conformance.NegativeResult) string {
 			fmt.Fprintf(&b, "  SKIP  %s\n", p.Description)
 		case p.Error != "":
 			fmt.Fprintf(&b, "  ERR   %s\n         error: %s\n", p.Description, x.text(p.Error))
+		case p.RateLimited():
+			fmt.Fprintf(&b, "  ----  %s\n         %s %s\n", p.Description, p.Warning(), p.WarningCheck())
+		case p.Passed() && p.WarningCheck() != "":
+			fmt.Fprintf(&b, "  WARN  %s  %d  %dms\n         %s %s\n", p.Description, p.StatusCode, p.DurationMs, p.Warning(), p.WarningCheck())
 		case p.Passed():
 			fmt.Fprintf(&b, "  PASS  %s  %d  %dms\n", p.Description, p.StatusCode, p.DurationMs)
 		default:
@@ -861,20 +881,33 @@ func NegativeText(result *conformance.NegativeResult) string {
 	fmt.Fprintln(&b)
 	passed, failed, skipped, errored := result.Counts()
 	total := passed + failed + errored
+	otherReason, rateLimited := result.Tally()
 
 	verdict := "PASSED"
 	switch {
-	case failed > 0 || errored > 0:
+	case result.FailingProbes() > 0 || errored > 0:
 		verdict = "FAILED"
 	case total == 0:
 		verdict = "NOTHING CHECKED"
+	case otherReason+rateLimited > 0:
+		verdict = fmt.Sprintf("PASSED with %d warning%s", otherReason+rateLimited, plural(otherReason+rateLimited))
 	}
-	fmt.Fprintf(&b, "%s  %d probe%s  ·  %d passed  ·  %d failed  ·  %d skipped  ·  %d error%s  %dms\n",
-		verdict, total, plural(total), passed, failed, skipped, errored, plural(errored), result.Duration.Milliseconds())
+	unchecked := ""
+	if rateLimited > 0 {
+		unchecked = fmt.Sprintf("  ·  %d not checked", rateLimited)
+	}
+	fmt.Fprintf(&b, "%s  %d probe%s  ·  %d passed  ·  %d failed%s  ·  %d skipped  ·  %d error%s  %dms\n",
+		verdict, total, plural(total), passed, failed, unchecked, skipped, errored, plural(errored), result.Duration.Milliseconds())
+	if otherReason > 0 {
+		fmt.Fprintf(&b, "       %d of the passed probe%s: refused with a status that does not show why — see %s\n", otherReason, plural(otherReason), conformance.CheckProbeOtherReason)
+	}
+	if rateLimited > 0 {
+		fmt.Fprintf(&b, "       %d probe%s not checked: the server limited the rate (429) — run again more slowly or raise the limit for this client\n", rateLimited, plural(rateLimited))
+	}
 	if failed > 0 {
 		authFailed, otherFailed := 0, 0
 		for _, p := range result.Probes {
-			if p.Skipped || p.Error != "" || p.Passed() {
+			if !p.Failed() {
 				continue
 			}
 			if p.Kind == openapi.ProbeMissingAuth {
@@ -890,7 +923,7 @@ func NegativeText(result *conformance.NegativeResult) string {
 			fmt.Fprintf(&b, "       %d probe%s sent no credentials and the server still accepted the request — fix the authentication rule for those operations\n", authFailed, plural(authFailed))
 		}
 	}
-	if total == 0 {
+	if total == 0 && rateLimited == 0 {
 		fmt.Fprintf(&b, "       %s\n", noProbesNote(skipped))
 	}
 	if errored > 0 {

@@ -277,7 +277,7 @@ steps:
 
 func TestInspect_OnlyWhatIsSentCountsAsAPlaceholderUse(t *testing.T) {
 	root := t.TempDir()
-	write(t, root, "requests/login.yaml", "schemaVersion: \"1\"\nname: Login\nmethod: POST\nurl: \"{{baseUrl}}/login\"\nbody:\n  type: json\n  content: '{\"user\":\"{{fromRequestFile}}\"}'\n")
+	write(t, root, "requests/login.yaml", "schemaVersion: \"1\"\ntitle: Login\nmethod: POST\nurl: \"{{baseUrl}}/login\"\nbody:\n  type: json\n  content: '{\"user\":\"{{fromRequestFile}}\"}'\n")
 	write(t, root, "scenarios/s.yaml", `schemaVersion: "1"
 title: "About {{inTitle}}"
 description: "uses {{inDescription}}"
@@ -434,7 +434,7 @@ steps:
 // A value a step extracts and a later step uses only inside its request file (requestRef) is used.
 func TestInspect_AnExtractionUsedInAReferencedRequestIsNotWeak(t *testing.T) {
 	root := t.TempDir()
-	write(t, root, "requests/me.yaml", "schemaVersion: \"1\"\nname: Me\nmethod: GET\nurl: \"http://x/me\"\nheaders:\n  - name: Authorization\n    value: \"Bearer {{token}}\"\n")
+	write(t, root, "requests/me.yaml", "schemaVersion: \"1\"\ntitle: Me\nmethod: GET\nurl: \"http://x/me\"\nheaders:\n  - name: Authorization\n    value: \"Bearer {{token}}\"\n")
 	write(t, root, "scenarios/s.yaml", `schemaVersion: "1"
 title: Refs
 steps:

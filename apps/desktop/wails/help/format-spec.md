@@ -102,7 +102,7 @@ followRedirects: false       # optional — false returns a 3xx response as it i
 - `auth` and manual `Authorization` headers are mutually exclusive — use one or the other.
 - `body.type: none` omits the body entirely; omitting the `body` block has the same effect.
 - `Content-Type` is set automatically from `body.type` when not explicitly provided.
-- `timeout` is a duration string such as `500ms`, `5s` or `1m`. Request files do **not** accept `timeoutMs`; an unknown field is silently ignored, so the timeout would not apply.
+- `timeout` is a duration string such as `500ms`, `5s` or `1m`. Request files do **not** accept `timeoutMs` (see **Unknown keys**).
 - `followRedirects: false` makes the client return the `301`/`302`/`307`/`308` response itself (with its `Location` header) instead of following it, so a redirect that the OpenAPI spec declares can be asserted and validated. Leave it out for the normal behaviour. It is also accepted on a scenario step's `request` and on a bundle request.
 - `body.type: multipart` sets its own `multipart/form-data` Content-Type with a generated boundary. `content` is a JSON array of fields: `n` is the field name, `t` is `text` or `file`, and `v` is the text value or, for files, an absolute path.
 
@@ -553,6 +553,15 @@ reports:                              # conform, run: --report (repeatable), for
 Place requests under `requests/`, scenarios under `scenarios/`, environments under `environments/` within your workspace. A bundle is an import format only and is not stored in the workspace.
 
 ---
+
+## Unknown keys
+
+A request, scenario or environment file may hold only the keys this document describes, spelled exactly (also in JSON). **Any other key is an error**, wherever it is, and the message names the spelling probably meant: `unknown key "asertions" in steps[0] (did you mean "assertions"?)`. Releases up to 0.14.1 ignored such a key, so a misspelled `assertions` left a step that checked nothing.
+
+- **Your own keys start with `x-`**, at any level: `x-owner: payments`. They are ignored. The app does not keep them when it saves the file.
+- A step’s `title` and `description`, and a request’s `description`, which releases up to 0.3 had, are still ignored.
+- Anything may appear inside `expected`.
+- Bundles and `clrsig.yaml` have their own rules, in their sections.
 
 ## Schema Version
 

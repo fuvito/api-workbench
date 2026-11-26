@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/fuvito/api-workbench/packages/core/serialization"
 	"gopkg.in/yaml.v3"
 )
 
@@ -107,6 +108,18 @@ func looksLikeScenario(path string) bool {
 	if err := yaml.Unmarshal(data, &doc); err != nil {
 		return bytes.Contains(data, []byte("steps"))
 	}
-	_, ok := doc["steps"]
-	return ok
+	if _, ok := doc["steps"]; ok {
+		return true
+	}
+	// "Steps" or "stpes" beside a title is a scenario with a mistake: let the parser report it
+	// rather than leave it out of the run
+	if _, titled := doc["title"]; !titled {
+		return false
+	}
+	for key := range doc {
+		if serialization.EditDistance(strings.ToLower(key), "steps") <= 2 && len(key) >= 4 {
+			return true
+		}
+	}
+	return false
 }

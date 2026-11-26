@@ -70,6 +70,12 @@ func ParseScenario(data []byte, format string) (*domain.Scenario, error) {
 	default:
 		return nil, fmt.Errorf("unknown format %q", format)
 	}
+	if err := checkSchemaVersion(sf.SchemaVersion); err != nil {
+		return nil, err
+	}
+	if err := checkKeys(data, format, sf); err != nil {
+		return nil, err
+	}
 	return scenarioFileToDomain(&sf)
 }
 

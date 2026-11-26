@@ -185,8 +185,7 @@ func TestCheck_ResponseBody(t *testing.T) {
 		{"CS-RESP-007 uuid format", "/constraints", "constraints", `{"uid":"x"}`, true},
 		{"a valid email passes", "/constraints", "constraints", `{"mail":"ana@example.com"}`, false},
 		{"a valid uuid passes", "/constraints", "constraints", `{"uid":"0b6f6b2e-8d2a-4c53-9a53-5c1f0a3d9e11"}`, false},
-		// Known gap, pinned so the catalog stays honest: formats outside the supported list.
-		{"CS-GAP-001 KnownGap format uri is not validated", "/constraints", "constraints", `{"link":"not a uri"}`, false},
+		{"CS-RESP-007 format uri", "/constraints", "constraints", `{"link":"not a uri"}`, true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

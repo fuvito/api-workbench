@@ -250,7 +250,7 @@ Exit code **2**: the command was wrong, not the API.
 
 ### 9. Check that bad requests are refused
 
-**What it does:** after the normal check, sends wrong requests: a required field left out, a wrong type, no credentials. A probe **passes** when the server refuses it.
+**What it does:** after the normal check, sends wrong requests: a required field left out, a wrong type, no credentials. A probe **passes** when the server refuses it with the status that fits the fault (for example `400` or `422` for a bad body, `401` or `403` for no credentials).
 
 <!-- run: exit=0 contains="11 probes" -->
 ```bash
@@ -269,7 +269,14 @@ Negative conformance probes — Clear Signal Example API 1.0.0
 PASSED  11 probes  ·  11 passed  ·  0 failed  ·  0 skipped  ·  0 errors  1ms
 ```
 
-**Read the status printed after each pass.** Any `4xx` passes, so a `401` or a rate limit's `429` can pass a probe whose body was never examined (CS-GAP-012). If no probe could be sent, the summary says `NOTHING CHECKED  0 probes` and why: nothing was tested. (Releases up to 0.13.3 said `PASSED  0 probes`.)
+| A probe shows | Meaning | Fails the run |
+|---|---|---|
+| `PASS` | Refused with a status that fits the fault. | No |
+| `WARN` | Refused with another `4xx`: it may never have looked at what was wrong (CS-PROBE-007). | Only with `--fail-on warning` |
+| `----` | The server answered `429`: **not checked** (CS-PROBE-008). Run again more slowly, or raise the limit for this client. | Only with `--fail-on warning` |
+| `FAIL` | The server accepted the bad request, or answered outside `4xx`. | Yes |
+
+If no probe could be judged, the summary says `NOTHING CHECKED  0 probes`: nothing was tested. Releases up to 0.14.1 showed every `4xx`, `429` included, as `PASS`.
 
 ### 10. Keep reports for CI
 

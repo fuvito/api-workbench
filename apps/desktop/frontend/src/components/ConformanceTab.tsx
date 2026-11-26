@@ -707,18 +707,24 @@ export function ConformanceTab({ onOpenCliBuilder, request, onSelectionChange, o
               <div role="region" aria-label="Negative probes" className="flex flex-col gap-1.5">
                 <h2 className="text-xs font-semibold">Negative probes</h2>
                 <p className="text-[11px] text-[var(--color-muted-foreground)]">
-                  {output.probes.filter(p => p.status === 'rejected').length} rejected as they should be,{' '}
+                  {output.probes.filter(p => p.status === 'rejected' && !p.warning).length} rejected as they should be,{' '}
                   <span className={output.probes.some(p => p.status === 'accepted') ? 'text-red-400' : ''}>
                     {output.probes.filter(p => p.status === 'accepted').length} accepted by the server
                   </span>{' '}
                   (it should have refused them).
+                  {output.probes.some(p => p.status === 'rejected' && p.warning) && (
+                    <span className="text-amber-400"> {output.probes.filter(p => p.status === 'rejected' && p.warning).length} refused, maybe for another reason.</span>
+                  )}
+                  {output.probes.some(p => p.status === 'not-checked') && (
+                    <span className="text-amber-400"> {output.probes.filter(p => p.status === 'not-checked').length} not checked (rate limited).</span>
+                  )}
                 </p>
                 <ul className="text-xs">
                   {output.probes.map((p, i) => (
                     <li key={i} className="flex gap-2 border-b border-[var(--color-border)] py-1">
-                      <span className={cn('w-16 shrink-0 font-medium', p.status === 'accepted' || p.status === 'error' ? 'text-red-400' : p.status === 'rejected' ? 'text-emerald-400' : 'text-[var(--color-muted-foreground)]')}>{p.status}</span>
+                      <span className={cn('w-16 shrink-0 font-medium', p.status === 'accepted' || p.status === 'error' ? 'text-red-400' : p.warning ? 'text-amber-400' : p.status === 'rejected' ? 'text-emerald-400' : 'text-[var(--color-muted-foreground)]')}>{p.status === 'rejected' && p.warning ? 'warning' : p.status}</span>
                       <span className="font-mono shrink-0">{p.method} {p.path}</span>
-                      <span className="text-[var(--color-muted-foreground)] min-w-0">{p.description}{p.statusCode > 0 ? ` (${p.statusCode})` : ''}{p.error ? `: ${p.error}` : ''}</span>
+                      <span className="text-[var(--color-muted-foreground)] min-w-0">{p.description}{p.statusCode > 0 ? ` (${p.statusCode})` : ''}{p.error ? `: ${p.error}` : ''}{p.warning && <span className="block text-amber-400">{p.warning}</span>}</span>
                     </li>
                   ))}
                 </ul>

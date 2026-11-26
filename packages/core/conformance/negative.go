@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fuvito/api-workbench/packages/core/checks"
 	"github.com/fuvito/api-workbench/packages/core/domain"
 	"github.com/fuvito/api-workbench/packages/core/executor"
 	"github.com/fuvito/api-workbench/packages/core/openapi"
@@ -24,10 +25,10 @@ type NegativeProbeResult struct {
 	Skipped     bool
 }
 
-// Passed reports whether the server correctly rejected the malformed/unauthorized
-// request with a 4xx status code.
+// Passed reports whether the server refused the malformed or unauthorized request: a 4xx other
+// than 429. WarningCheck says when the status does not show it was refused for the tested reason.
 func (r NegativeProbeResult) Passed() bool {
-	return r.StatusCode >= 400 && r.StatusCode < 500
+	return r.StatusCode >= 400 && r.StatusCode < 500 && r.StatusCode != 429
 }
 
 // NegativeResult holds the aggregate outcome of a negative conformance run.
@@ -41,10 +42,14 @@ type NegativeResult struct {
 
 	// Secrets: see ConformResult.Secrets.
 	Secrets []string
+
+	// FailOn: see ConformResult.FailOn.
+	FailOn checks.Severity
 }
 
 // Counts returns (passed, failed, skipped, errored) probe counts.
 // failed = server returned 2xx/3xx/5xx when it should have returned 4xx.
+// A probe a rate limit left unchecked (429) is in none of the four: see Tally.
 func (r *NegativeResult) Counts() (passed, failed, skipped, errored int) {
 	for _, p := range r.Probes {
 		switch {
@@ -54,6 +59,7 @@ func (r *NegativeResult) Counts() (passed, failed, skipped, errored int) {
 			errored++
 		case p.Passed():
 			passed++
+		case p.RateLimited():
 		default:
 			failed++
 		}
@@ -144,7 +150,7 @@ func (r *NegativeRunner) Run(ctx context.Context, spec *openapi.Spec, baseURL st
 		pr.DurationMs = resp.Duration.Milliseconds()
 		result.Probes = append(result.Probes, pr)
 
-		if !pr.Passed() && opts.FailFast {
+		if pr.Failed() && opts.FailFast {
 			break
 		}
 	}

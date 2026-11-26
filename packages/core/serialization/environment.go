@@ -41,6 +41,9 @@ func ParseEnvironment(data []byte, format string) (*domain.Environment, error) {
 	if err := checkSchemaVersion(ef.SchemaVersion); err != nil {
 		return nil, err
 	}
+	if err := checkKeys(data, format, ef); err != nil {
+		return nil, err
+	}
 	return envFileToDomain(&ef), nil
 }
 

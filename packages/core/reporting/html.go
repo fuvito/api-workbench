@@ -343,9 +343,17 @@ func conformDoc(result *conformance.ConformResult, cov *conformance.CoverageRepo
 			case p.Error != "":
 				row.Status = "ERR"
 				row.Lines = append(row.Lines, htmlLine{Mark: "!", Text: "error: " + newRedactor(neg.Secrets, false).text(p.Error)})
+			case p.RateLimited():
+				row.Status = "WARN"
+				row.Meta = "not checked"
+				row.Lines = append(row.Lines, htmlLine{Mark: "!", Text: p.Warning() + " " + p.WarningCheck()})
 			case p.Passed():
 				row.Status = "PASS"
 				row.Meta = fmt.Sprintf("%d · %dms", p.StatusCode, p.DurationMs)
+				if p.WarningCheck() != "" {
+					row.Status = "WARN"
+					row.Lines = append(row.Lines, htmlLine{Mark: "!", Text: p.Warning() + " " + p.WarningCheck()})
+				}
 			default:
 				row.Status = "FAIL"
 				row.Lines = append(row.Lines, htmlLine{Mark: "✗", Text: fmt.Sprintf("server accepted invalid request with %d", p.StatusCode)})
@@ -353,7 +361,13 @@ func conformDoc(result *conformance.ConformResult, cov *conformance.CoverageRepo
 			sec.Rows = append(sec.Rows, row)
 		}
 		doc.Sections = append(doc.Sections, sec)
-		if nf > 0 {
+		if other, limited := neg.Tally(); other+limited > 0 {
+			sec.Footer += fmt.Sprintf("  ·  %d warnings", other+limited)
+			if limited > 0 {
+				sec.Footer += fmt.Sprintf(" (%d not checked)", limited)
+			}
+		}
+		if neg.FailingProbes() > 0 {
 			doc.Passed = false
 		}
 	}

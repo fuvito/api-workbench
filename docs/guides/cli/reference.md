@@ -8,7 +8,7 @@
 
 | Command | 0 | 1 | 2 |
 |---|---|---|---|
-| `conform` | No failures (also with only warnings, or only known violations) | A violation, or an operation that could not be checked | The spec or the command was wrong, or the filters matched nothing |
+| `conform` | No failures (also with only warnings, a probe not checked included, or only known violations) | A violation, or an operation that could not be checked | The spec or the command was wrong, or the filters matched nothing |
 | `conform --list` | The spec was read | | The spec or the command was wrong |
 | `run` | Every scenario passed | A scenario failed | A file could not be read or parsed, nothing was found, or the command was wrong |
 | `validate` | No errors (with `--strict`, no warnings) | A file has errors or warnings, or does not parse | A file could not be read, or the command was wrong |

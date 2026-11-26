@@ -811,9 +811,11 @@ export interface ConformProbe {
   path: string
   kind: string
   description: string
-  status: 'rejected' | 'accepted' | 'error' | 'skipped'
+  status: 'rejected' | 'accepted' | 'error' | 'skipped' | 'not-checked'
   statusCode: number
   error?: string
+  /** What is doubtful: refused for what may be another reason, or not checked (429). */
+  warning?: string
 }
 
 export interface ConformFinding {

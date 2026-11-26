@@ -338,6 +338,9 @@ type ConformProbeIO struct {
 	Status      string `json:"status"` // rejected, accepted, error, skipped
 	StatusCode  int    `json:"statusCode"`
 	Error       string `json:"error,omitempty"`
+	// Warning says what is doubtful about the answer: refused for what may be another reason, or
+	// not checked because of a rate limit.
+	Warning string `json:"warning,omitempty"`
 }
 
 // ConformFindingIO explains one violation: where, what the spec wanted, what the server sent, why
@@ -743,8 +746,12 @@ func conformOutputIO(out application.ConformOutput, baseURL string, writes bool)
 				item.Status = "skipped"
 			case p.Error != "":
 				item.Status = "error"
+			case p.RateLimited():
+				item.Status = "not-checked"
+				item.Warning = p.Warning()
 			case p.Passed():
 				item.Status = "rejected"
+				item.Warning = p.Warning()
 			default:
 				item.Status = "accepted"
 			}

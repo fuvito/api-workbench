@@ -112,18 +112,20 @@ func RunConformance(ctx context.Context, in ConformInput) ConformOutput {
 	}
 	if in.Negative {
 		out.Negative = conformance.NewNegative(in.Exec).Run(ctx, in.Spec, in.BaseURL, in.Env, opts)
+		out.Negative.FailOn = failOn
 	}
 
 	_, failed, _ := out.Result.Counts()
 	negFailed := 0
 	if out.Negative != nil {
-		_, negFailed, _, _ = out.Negative.Counts()
+		negFailed = out.Negative.FailingProbes()
 	}
 	out.Failed = failed > 0 || negFailed > 0
 	out.Violations = conformance.ViolationsFor(out.Result, out.Negative, failOn)
 	out.Warnings = out.Result.WarningCount()
 	if in.Baseline != nil {
 		diff := conformance.CompareChecked(out.Violations, in.Baseline, conformance.CheckedOperations(out.Result, out.Negative))
+		diff.Fixed = conformance.WithoutUnchecked(diff.Fixed, out.Negative)
 		out.Diff = &diff
 		out.Failed = len(diff.New) > 0
 		out.Result.BaselineApplied = true

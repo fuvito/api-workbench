@@ -53,6 +53,7 @@ clrsig conform examples/server/openapi.yaml --base-url http://localhost:1 --env 
 | `needs a scenario file or folder` | No file was given, and the project file names none. | Give one, or set `run.scenarios` in `clrsig.yaml`. |
 | `reading scenario: open …` | The path is wrong from the folder you are in. | Paths on the command line start at the current folder. |
 | `schemaVersion "…" is not supported` | The file says a version this `clrsig` does not know. | Upgrade `clrsig`, or correct the file: request, scenario and environment files take `"1"`. |
+| `unknown key "…"` | A misspelled key, or one this file does not have. | Use the spelling suggested, or see the [format spec](../../../apps/desktop/wails/help/format-spec.md). For a key of your own, start it with `x-`. |
 | `the bundle has several environments` | `bundle run` cannot choose. | Add `--env <name>`. |
 | `still holds the CHANGE_ME` | A secret from an exported bundle has no value yet. | Put it in the environment file, or give it with `--var` or `--env-file`. |
 | `nothing was written: … already there` | `generate` will not replace edited files. | Use `--output` with a new folder; `--force` replaces them. |

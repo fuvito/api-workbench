@@ -227,10 +227,14 @@ func ViolationsFor(r *ConformResult, neg *NegativeResult, failOn checks.Severity
 	}
 	if neg != nil {
 		for _, p := range neg.Probes {
-			if p.Skipped || p.Error != "" || p.Passed() {
+			if !p.FailsRun(failOn) {
 				continue
 			}
+			// a doubtful answer that counts is recorded under its own check
 			id := probeChecks[string(p.Kind)]
+			if !p.Failed() {
+				id = p.WarningCheck()
+			}
 			if id == "" {
 				id = "other"
 			}

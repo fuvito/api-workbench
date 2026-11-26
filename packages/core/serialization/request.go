@@ -64,6 +64,12 @@ func ParseRequest(data []byte, format string) (*domain.Request, error) {
 	default:
 		return nil, fmt.Errorf("unknown format %q; expected yaml or json", format)
 	}
+	if err := checkSchemaVersion(rf.SchemaVersion); err != nil {
+		return nil, err
+	}
+	if err := checkKeys(data, format, rf); err != nil {
+		return nil, err
+	}
 	return requestFileToDomain(&rf)
 }
 

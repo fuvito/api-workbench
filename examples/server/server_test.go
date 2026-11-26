@@ -78,7 +78,7 @@ func TestServerConformsToItsSpec(t *testing.T) {
 	}
 }
 
-// A probe passes on any 4xx (CS-GAP-012), so a pass alone does not show why the server said no.
+// A probe passes on any 4xx (with a warning for a doubtful one), so a pass alone does not show why the server said no.
 // Here each probe must be rejected for the thing it tests.
 func TestNegativeProbesAreRejectedForTheTestedReason(t *testing.T) {
 	url := start(t, nil)

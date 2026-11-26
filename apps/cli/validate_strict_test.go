@@ -119,7 +119,7 @@ func TestValidateStrict_UsesTheProjectFile(t *testing.T) {
 // A value used only inside a referenced request file is used.
 func TestValidateStrict_ReadsReferencedRequestFiles(t *testing.T) {
 	project(t, map[string]string{
-		"requests/me.yaml": "schemaVersion: \"1\"\nname: Me\nmethod: GET\nurl: \"http://x/me\"\nheaders:\n  - name: Authorization\n    value: \"Bearer {{token}}\"\n",
+		"requests/me.yaml": "schemaVersion: \"1\"\ntitle: Me\nmethod: GET\nurl: \"http://x/me\"\nheaders:\n  - name: Authorization\n    value: \"Bearer {{token}}\"\n",
 		"scenarios/s.yaml": `schemaVersion: "1"
 title: Refs
 steps:
